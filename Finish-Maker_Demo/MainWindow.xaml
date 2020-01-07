@@ -1,0 +1,149 @@
+﻿<Window x:Class="Finish_Maker_Demo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Finish_Maker_Demo"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="520" Width="570">
+    <Window.Resources>
+        <Style x:Key="stdButton" TargetType="Button">
+            <Setter Property="Width" Value="100"/>
+            <Setter Property="FontSize" Value="15"/>
+        </Style>
+
+        <Style x:Key="stdStackPanel" TargetType="StackPanel">
+            <Setter Property="MinHeight" Value="40"/>
+            <Setter Property="Margin" Value="15 10 15 0"/>
+            <Setter Property="Orientation" Value="Horizontal"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="wrapPanelStyle" TargetType="WrapPanel">
+            <Style.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="MaxWidth" Value="180"/>
+                    <Setter Property="FontSize" Value="16"/>
+                    <Setter Property="VerticalAlignment" Value="Center"/>
+                    <Setter Property="Padding" Value="5 5 5 5"/>
+                </Style>
+                <Style TargetType="Button">
+                    <Setter Property="Background" Value="Red"/>
+                    <Setter Property="Height" Value="10"/>
+                    <Setter Property="Width" Value="10"/>
+                    <Setter Property="VerticalAlignment" Value="Top"/>
+                    <Setter Property="Margin" Value="5 0 0 0"/>
+                </Style>
+            </Style.Resources>
+        </Style>
+    </Window.Resources>
+    <Grid Background="LightGray">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="310"/>
+            <RowDefinition x:Name="consoleGrid" Height="0.55*"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0">
+            <StackPanel Style="{StaticResource stdStackPanel}">
+                <StackPanel Orientation="Vertical" Margin="10 0 40 0">
+                    <StackPanel Orientation="Horizontal" Margin="0 0 0 0">
+                        <CheckBox IsChecked="{Binding IsSelectedExpLinkCheck}" Margin="0 0 5 0"/>
+                        <TextBlock Text="Create by SKU from Export Links"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding IsSelectedPDCheck}" Margin="0 0 5 0"/>
+                        <TextBlock Text="Create by SKU from Product Data"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding ValidateFiles}" Margin="0 0 5 0"/>
+                        <TextBlock Text="Validate files"/>
+                    </StackPanel>
+                </StackPanel>
+                <TextBox Text="{Binding UserName}" Name="userName" Height="36" Width="250" FontSize="15" Foreground="Black" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"></TextBox>
+            </StackPanel>
+            <StackPanel Style="{StaticResource stdStackPanel}" ToolTip="Select ExportLinks.csv file">
+                <Button Command="{Binding AddExpLinksCommand}" Style="{StaticResource stdButton}" Content="Export Links"/>
+                <ListBox ItemsSource="{Binding ExpLinksList}" x:Name="ExpLinkListBox" Width="415" Margin="5 0 0 0" Height="40" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" ItemHeight="36"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <WrapPanel Style="{StaticResource wrapPanelStyle}" Background="DarkCyan">
+                                <TextBlock Text="{Binding Path=ViewPath}" ToolTip="{Binding Path=Path}"/>
+                                <Button Command="{Binding ElementName=ExpLinkListBox, Path=DataContext.DeleteCommand}" CommandParameter="{Binding }"/>
+                            </WrapPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+            <StackPanel Style="{StaticResource stdStackPanel}" ToolTip="Select PD.xlsx file">
+                <Button Command="{Binding AddPDCommand}" Style="{StaticResource stdButton}" Content="PD"/>
+                <ListBox ItemsSource="{Binding PDList}" x:Name="PDListBox" Width="415" Margin="5 0 0 0" Height="40" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" ItemHeight="36"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <WrapPanel Style="{StaticResource wrapPanelStyle}" Background="DarkCyan">
+                                <TextBlock Text="{Binding Path=ViewPath}" ToolTip="{Binding Path=Path}"/>
+                                <Button Command="{Binding ElementName=PDListBox, Path=DataContext.DeleteCommand}" CommandParameter="{Binding }"/>
+                            </WrapPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+            <StackPanel Style="{StaticResource stdStackPanel}" ToolTip="Select ID.csv file or old ExportLinks.csv/xlsx file">
+                <Button Command="{Binding AddIDCommand}" Style="{StaticResource stdButton}" Content="ID"/>
+                <ListBox ItemsSource="{Binding IDList}" x:Name="IDListBox" Width="415" Margin="5 0 0 0" Height="40" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" ItemHeight="36"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <WrapPanel Style="{StaticResource wrapPanelStyle}" Background="DarkCyan">
+                                <TextBlock Text="{Binding Path=ViewPath}" ToolTip="{Binding Path=Path}"/>
+                                <Button Command="{Binding ElementName=IDListBox, Path=DataContext.DeleteCommand}" CommandParameter="{Binding }"/>
+                            </WrapPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+            <StackPanel Style="{StaticResource stdStackPanel}" ToolTip="Select ChildTitleDuplicates.csv file or nothing">
+                <Button Command="{Binding AddChtDuplicatesCommand}" Style="{StaticResource stdButton}" Content="ChTDuplicates"/>
+                <ListBox ItemsSource="{Binding ChtDuplicatesList}" x:Name="ChtDuplicatesListBox" Width="415" Margin="5 0 0 0" Height="40" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" ItemHeight="36"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <WrapPanel Style="{StaticResource wrapPanelStyle}" Background="DarkCyan">
+                                <TextBlock Text="{Binding Path=ViewPath}" ToolTip="{Binding Path=Path}"/>
+                                <Button Command="{Binding ElementName=ChtDuplicatesListBox, Path=DataContext.DeleteCommand}" CommandParameter="{Binding }"/>
+                            </WrapPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+            
+            <StackPanel Style="{StaticResource stdStackPanel}">
+                <ProgressBar Width="420" HorizontalAlignment="Left" Height="40" Minimum="0" Maximum="100" Name="pbStatus" Value="{Binding Progress}"/>
+                <Button Command="{Binding Start}" Width="100" Content="Run" FontSize="16"/>
+            </StackPanel>
+        </StackPanel>
+
+        <DockPanel Grid.Row="1" Margin="15 5 15 10" DataContext="{Binding ConsoleTextProperty}">
+            <TextBox Text="{Binding TheText}" Foreground="{Binding TheColor}" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible" Padding="5" FontSize="15" TextWrapping="Wrap"/>
+        </DockPanel>
+    </Grid>
+</Window>
