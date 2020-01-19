@@ -620,7 +620,7 @@ namespace Finish_Maker_Demo
             //app.Quit();
         }
 
-        public void WriteExcelFile(string filePath, List<List<string>> data)
+        public void WriteExcelFile(string filePath, HashSet<string> data)
         {
             using (SpreadsheetDocument document = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
             {
@@ -649,28 +649,28 @@ namespace Finish_Maker_Demo
                 sheets.Append(sheet);
 
 
-                //foreach (string s in data)
-                //{
-                //    Row newRow = new Row();
-                //    Cell cell = new Cell();
-                //    cell.DataType = CellValues.String;
-                //    cell.CellValue = new CellValue(s);
-                //    newRow.AppendChild(cell);
-                //    sheetData.AppendChild(newRow);
-                //}
-
-                foreach (List<string> dataList in data)
+                foreach (string s in data)
                 {
                     Row newRow = new Row();
-                    foreach (string s in dataList)
-                    {
-                        Cell cell = new Cell();
-                        cell.DataType = CellValues.String;
-                        cell.CellValue = new CellValue(s);
-                        newRow.AppendChild(cell);
-                    }
+                    Cell cell = new Cell();
+                    cell.DataType = CellValues.String;
+                    cell.CellValue = new CellValue(s);
+                    newRow.AppendChild(cell);
                     sheetData.AppendChild(newRow);
                 }
+
+                //foreach (List<string> dataList in data)
+                //{
+                //    Row newRow = new Row();
+                //    foreach (string s in dataList)
+                //    {
+                //        Cell cell = new Cell();
+                //        cell.DataType = CellValues.String;
+                //        cell.CellValue = new CellValue(s);
+                //        newRow.AppendChild(cell);
+                //    }
+                //    sheetData.AppendChild(newRow);
+                //}
 
             }
 

@@ -10,7 +10,7 @@ namespace Finish_Maker_Demo
     {
         private FileReader fileReader;
         public string userName;
-        private List<List<string>> exportLinks;
+        private IEnumerable<List<string>> exportLinks;
         public Processing(FileReader reader, string userName)
         {
             fileReader = reader;
@@ -19,26 +19,406 @@ namespace Finish_Maker_Demo
 
         private void GenerateMainData()
         {
-            exportLinks = fileReader.ExportLinks.ToList();
+            exportLinks = fileReader.ExportLinks;
+            var isFirst = true;
 
-            int problematicSKUPosition = exportLinks[0].Count - 1;
-            int fitmUpdatePosition = exportLinks[0].Count;
-            int newIDCheckPosition = exportLinks[0].Count + 1;
-            int brandSeriesPosition = exportLinks[0].Count + 2;
-            int brandKayPosition = exportLinks[0].Count + 3;
+            int problematicSKUPosition = 0;
+            int fitmUpdatePosition = 0;
+            int newIDCheckPosition = 0;
+            int brandSeriesPosition = 0;
+            int brandKeyPosition = 0;
+            int pDataBrandSeriesPosition = fileReader.PData.PDData1[0].Count - 2;
+            int pDataBrandKeyPosition = fileReader.PData.PDData1[0].Count - 1;
+            int pData2BrandKeyPosition = fileReader.PData.PDData2[0].Count - 1;
+            SortedSet<string> brandSeriesKey = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> allSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> idsPlusBrandSeries = new HashSet<string>();
+            HashSet<string> newSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> fitmentUpdateSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> brandKeyPlusSKuFitmentUpdate = new HashSet<string>();
+            HashSet<string> skuPlusBrandsSeries = new HashSet<string>();
+            HashSet<string> problematicBrandSeriesPlusSKU = new HashSet<string>();
 
-            AddCheckColumnsToExpLinks(exportLinks, problematicSKUPosition, fitmUpdatePosition, newIDCheckPosition, brandSeriesPosition);
-            AddBrands(exportLinks, brandSeriesPosition);
-            AddNewSKUCount(exportLinks, brandKayPosition);
-            AddNewIDsCount(exportLinks, brandSeriesPosition, newIDCheckPosition);
-            AddFitmentUpdate(exportLinks, brandSeriesPosition, brandKayPosition, newIDCheckPosition, fitmUpdatePosition);
-            AddImgPDfVideo();
-            AddRanksAndRAPs();
-            AddImprovedStructure();
-            AddUpdateType();
-            AddTotalWebsiteSKU(exportLinks, brandSeriesPosition);
-            AddProblematicSKU(exportLinks, brandSeriesPosition, problematicSKUPosition);
+            GetNewAndFitmentUpdateSKU(newSKU, fitmentUpdateSKU, pDataBrandKeyPosition);
+
+            foreach (var row in exportLinks)
+            {
+                if (isFirst)
+                {
+                    problematicSKUPosition = row.Count - 1;
+                    fitmUpdatePosition = row.Count;
+                    newIDCheckPosition = row.Count + 1;
+                    brandSeriesPosition = row.Count + 2;
+                    brandKeyPosition = row.Count + 3;
+                    isFirst = false;
+
+                    AddCheckColumnsToExpLinksHeader(row, problematicSKUPosition, fitmUpdatePosition, newIDCheckPosition, brandSeriesPosition);
+                    continue;
+                }
+
+                AddCheckColumnsToExpLinksEmpty(row, problematicSKUPosition, fitmUpdatePosition, newIDCheckPosition, brandSeriesPosition);
+                AddBrands(row, brandSeriesPosition, brandSeriesKey);
+                AddNewSKUCount(row, brandKeyPosition, allSKU);
+                AddNewIDsCount(row, brandSeriesPosition, newIDCheckPosition, idsPlusBrandSeries);
+                AddFitmentUpdate(row, brandSeriesPosition, brandKeyPosition, newIDCheckPosition, fitmUpdatePosition, brandKeyPlusSKuFitmentUpdate, newSKU, fitmentUpdateSKU);
+                AddTotalWebsiteSKU(row, brandSeriesPosition, skuPlusBrandsSeries);
+                AddProblematicSKU(row, brandSeriesPosition, problematicSKUPosition, problematicBrandSeriesPlusSKU);
+                AddNewProductInfo(row, brandKeyPosition, newSKU);
+                AddFitmentDataInfo(row, fitmUpdatePosition);
+                AddProblematicInfo(row, problematicSKUPosition);
+                AddMfrPlusSKU(row, newSKU, brandKeyPosition);
+            }
+
+            GeneratingMainDataTabels(brandSeriesKey, pDataBrandSeriesPosition, allSKU, pDataBrandKeyPosition, idsPlusBrandSeries, brandKeyPlusSKuFitmentUpdate, skuPlusBrandsSeries, problematicBrandSeriesPlusSKU);
+
+            AddImgPDfVideo(pDataBrandSeriesPosition);
+            AddRanksAndRAPs(pData2BrandKeyPosition);
+            AddImprovedStructure(pDataBrandSeriesPosition);
+            AddUpdateType(pDataBrandKeyPosition);
             AddHeaderToMainData();
+        }
+        private void GeneratingMainDataTabels(SortedSet<string> brandSeriesKey, int pDataBrandSeriesPosition, HashSet<string> allSKU, int pDataBrandKeyPosition, HashSet<string> idsPlusBrandSeries, HashSet<string> brandKeyPlusSKuFitmentUpdate, HashSet<string> skuPlusBrandsSeries, HashSet<string> problematicBrandSeriesPlusSKU)
+        {
+            mainData = new string[brandSeriesKey.Count + 2, 19];
+            int positionForMainData = 2;
+
+            foreach (string s in brandSeriesKey)
+            {
+                mainData[positionForMainData, 1] = s;
+                positionForMainData++;
+
+            }
+
+            for (int i = 2; i < mainData.GetLength(0); i++)
+            {
+                int newProductCount = 0;
+                for (int y = 1; y < fileReader.PData.PDData1.Count; y++)
+                {
+                    if (mainData[i, 1].ToLower() == fileReader.PData.PDData1[y][pDataBrandSeriesPosition].ToLower() && fileReader.PData.PDData1[y][2].ToLower() == "new" && allSKU.Contains(fileReader.PData.PDData1[y][pDataBrandKeyPosition]))
+                    {
+                        newProductCount++;
+                    }
+                }
+                mainData[i, 3] = newProductCount.ToString();
+            }
+
+            List<string[]> brandIDsForCheck = new List<string[]>();
+
+            foreach (string s in idsPlusBrandSeries)
+            {
+                string[] brandIDsLine = s.Split('|');
+                brandIDsForCheck.Add(brandIDsLine);
+            }
+
+            for (int i = 2; i < mainData.GetLength(0); i++)
+            {
+                int newIDsCount = 0;
+                for (int x = 0; x < brandIDsForCheck.Count; x++)
+                {
+                    if (mainData[i, 1].ToLower() == brandIDsForCheck[x][1].ToLower())
+                    {
+                        newIDsCount++;
+                    }
+                }
+                mainData[i, 4] = newIDsCount.ToString();
+            }
+
+            List<string[]> fitmentUpdateForCheck = new List<string[]>();
+            string[] fitmentUpdateLine;
+
+            foreach (string s in brandKeyPlusSKuFitmentUpdate)
+            {
+                fitmentUpdateLine = s.Split('|');
+                fitmentUpdateForCheck.Add(fitmentUpdateLine);
+            }
+
+            for (int i = 2; i < mainData.GetLength(0); i++)
+            {
+                int fitmentUpdateCount = 0;
+                for (int x = 0; x < fitmentUpdateForCheck.Count; x++)
+                {
+                    if (mainData[i, 1].ToLower() == fitmentUpdateForCheck[x][0].ToLower())
+                    {
+                        fitmentUpdateCount++;
+                    }
+                }
+                mainData[i, 5] = fitmentUpdateCount.ToString();
+            }
+
+            for (int i = 2; i < mainData.GetLength(0); i++)
+            {
+                int totalSKuCount = 0;
+                foreach (string s in skuPlusBrandsSeries)
+                {
+                    string[] dataLine = s.Split('|');
+                    if (mainData[i, 1].ToLower() == dataLine[0].ToLower())
+                    {
+                        totalSKuCount++;
+                    }
+                }
+                mainData[i, 11] = totalSKuCount.ToString();
+            }
+
+            for (int i = 2; i < mainData.GetLength(0); i++)
+            {
+                int problematicCount = 0;
+                bool misImg = false;
+
+                foreach (string s in problematicBrandSeriesPlusSKU)
+                {
+                    string[] problematicLine = s.Split('|');
+                    if (problematicLine[0].ToLower() == mainData[i, 1].ToLower())
+                    {
+                        problematicCount++;
+                        if (problematicLine[2] == "2" || problematicLine[2] == "3")
+                        {
+                            misImg = true;
+                        }
+                    }
+                }
+
+                mainData[i, 12] = problematicCount.ToString();
+                if (misImg == true)
+                {
+                    mainData[i, 14] = "Task for Designers is still in progress";
+                }
+            }
+        }
+        private void AddProblematicInfo(List<string> exportLink, int problematicSKUPosition)
+        {
+            if (exportLink[problematicSKUPosition] != "")
+            {
+                string dataLine = string.Empty;
+                if (exportLink[problematicSKUPosition] == "3")
+                {
+                    dataLine = exportLink[1] + "|" + exportLink[2] + "|Line|Missing fitment information / Missing images|Request was sent / Task to designers was sent";
+                }
+                else if (exportLink[problematicSKUPosition] == "1")
+                {
+                    dataLine = exportLink[1] + "|" + exportLink[2] + "|Live|Missing fitment information|Request was sent";
+                }
+                else
+                {
+                    dataLine = exportLink[1] + "|" + exportLink[2] + "|Live|Missing images|Task to designers was sent";
+                }
+                problematicInfo.Add(dataLine);
+            }
+        }
+        private void GenerateProblematicSKuList()
+        {
+            problematicSKU = new string[problematicInfo.Count + 1, 5];
+
+            problematicSKU[0, 0] = "Brand";
+            problematicSKU[0, 1] = "SKU";
+            problematicSKU[0, 2] = "Status(Dead/Live)";
+            problematicSKU[0, 3] = "Reason";
+            problematicSKU[0, 4] = "What was done?";
+
+            int position = 1;
+            foreach (string s in problematicInfo)
+            {
+                string[] dataList = s.Split('|');
+
+                for (int i = 0; i < dataList.Length; i++)
+                {
+                    problematicSKU[position, i] = dataList[i];
+                }
+                position++;
+            }
+        }
+        private void AddFitmentDataInfo(List<string> exportLink, int fitmUpdatePosition)
+        {
+            if (exportLink[fitmUpdatePosition] == "fitment update")
+            {
+                string dataList = exportLink[1] + "|" + exportLink[2] + "|" + exportLink[12] + "|" + exportLink[3];
+                fitmentUpdateInfo.Add(dataList);
+            }
+        }
+        private void GenerateFitmentUpdateList()
+        {
+            fitmentUpdateList = new string[fitmentUpdateInfo.Count + 1, 4];
+
+            fitmentUpdateList[0, 0] = "Brand";
+            fitmentUpdateList[0, 1] = "SKU";
+            fitmentUpdateList[0, 2] = "linkwww";
+            fitmentUpdateList[0, 3] = "Product Name";
+
+            int position = 1;
+            foreach (string s in fitmentUpdateInfo)
+            {
+                bool check = true;
+                string[] dataList = s.Split('|');
+
+                for (int i = 1; i < position; i++)
+                {
+                    if (dataList[0] == fitmentUpdateList[i, 0] && dataList[1] == fitmentUpdateList[i, 1])
+                    {
+                        check = false;
+                        break;
+                    }
+                }
+
+                if (check == false)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < dataList.Length; i++)
+                {
+                    fitmentUpdateList[position, i] = dataList[i];
+                }
+                position++;
+            }
+
+        }
+        private void AddNewProductInfo(List<string> exportLink, int brandKeyPosition, HashSet<string> newSKU)
+        {
+            if (newSKU.Contains(exportLink[brandKeyPosition]))
+            {
+                List<string> dataLine = new List<string>();
+                dataLine.Add(exportLink[1]);
+                dataLine.Add("No");
+                dataLine.Add(exportLink[2]);
+                dataLine.Add(exportLink[0]);
+                dataLine.Add(exportLink[12]);
+                dataLine.Add(exportLink[7]);
+                dataLine.Add(exportLink[9]);
+                dataLine.Add(exportLink[11]);
+                dataLine.Add(exportLink[3]);
+                dataLine.Add(exportLink[4]);
+
+                newProductsInfo.Add(dataLine);
+            }
+        }
+        private void AddMfrPlusSKU(List<string> exportLink, HashSet<string> newSKU, int brandKeyPosition)
+        {
+            mfrPlusSKU.Add("Manufacturer ID|SKU");
+            if (newSKU.Contains(exportLink[brandKeyPosition]))
+            {
+                mfrPlusSKU.Add(exportLink[8] + "|" + exportLink[2]);
+            }
+        }
+        private void GenerateNewSKuList()
+        {
+            newSKUList = new string[newProductsInfo.Count + 1, 10];
+
+            newSKUList[0, 0] = "Brand";
+            newSKUList[0, 1] = "New Series";
+            newSKUList[0, 2] = "SKU";
+            newSKUList[0, 3] = "Product ID";
+            newSKUList[0, 4] = "linkwww";
+            newSKUList[0, 5] = "Make";
+            newSKUList[0, 6] = "Model";
+            newSKUList[0, 7] = "Years";
+            newSKUList[0, 8] = "Product Name";
+            newSKUList[0, 9] = "Child Title";
+
+            for (int i = 1; i < newSKUList.GetLength(0); i++)
+            {
+                for (int x = 0; x < newSKUList.GetLength(1); x++)
+                {
+                    newSKUList[i, x] = newProductsInfo[i - 1][x];
+                }
+            }
+        }
+        private void AddProblematicSKU(List<string> exportLink, int brandSeriesPos, int problematicPos, HashSet<string> problematicBrandSeriesPlusSKU)
+        {
+            if (exportLink[6].Contains("{\"not_our_mmy\":{\"unknown\":{\"unknown\":{\"0\":{") && exportLink[5].Contains("images/no-image.jpg"))
+            {
+                exportLink[problematicPos] = "3";
+                problematicBrandSeriesPlusSKU.Add(exportLink[brandSeriesPos] + "|" + exportLink[2] + "|" + exportLink[problematicPos]);
+            }
+            else if (exportLink[6].Contains("{\"not_our_mmy\":{\"unknown\":{\"unknown\":{\"0\":{"))
+            {
+                exportLink[problematicPos] = "1";
+                problematicBrandSeriesPlusSKU.Add(exportLink[brandSeriesPos] + "|" + exportLink[2] + "|" + exportLink[problematicPos]);
+            }
+            else if (exportLink[5].Contains("images/no-image.jpg"))
+            {
+                exportLink[problematicPos] = "2";
+                problematicBrandSeriesPlusSKU.Add(exportLink[brandSeriesPos] + "|" + exportLink[2] + "|" + exportLink[problematicPos]);
+            }
+        }
+        private void AddTotalWebsiteSKU(List<string> exportLink, int brandSeriesPos, HashSet<string> skuPlusBrandsSeries)
+        {
+            skuPlusBrandsSeries.Add(exportLink[brandSeriesPos] + "|" + exportLink[2]);
+        }
+        private void GetNewAndFitmentUpdateSKU(HashSet<string> newSKU, HashSet<string> fitmentUpdateSKU, int pDataBrandKeyPosition)
+        {
+            for (int i = 1; i < fileReader.PData.PDData1.Count; i++)
+            {
+                if (fileReader.PData.PDData1[i][2].ToLower() == "new")
+                {
+                    newSKU.Add(fileReader.PData.PDData1[i][pDataBrandKeyPosition]);
+                }
+
+                if (fileReader.PData.PDData1[i][2].ToLower() == "fitment update")
+                {
+                    fitmentUpdateSKU.Add(fileReader.PData.PDData1[i][pDataBrandKeyPosition]);
+                }
+            }
+        }
+        private void AddFitmentUpdate(List<string> exportLink, int brandsSeriesPos, int brandKayPos, int newIDPos, int fitmentPos, HashSet<string> brandKeyPlusSKuFitmentUpdate, HashSet<string> newSKU, HashSet<string> fitmentUpdateSKU)
+        {
+            if (fitmentUpdateSKU.Contains(exportLink[brandKayPos]))
+            {
+                exportLink[fitmentPos] = "fitment update";
+                brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
+                return;
+            }
+
+            if (exportLink[newIDPos] == "new")
+            {
+                if (!newSKU.Contains(exportLink[brandKayPos]) && !exportLink[6].Contains("{\"not_our_mmy\":{\"unknown\":{\"unknown\":{\"0\":{"))
+                {
+                    exportLink[fitmentPos] = "fitment update";
+                    brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
+                }
+            }
+            else
+            {
+                if (fileReader.ID.ProdIDMMY != null)
+                {
+                    string idMMYKey = exportLink[0] + '|' + exportLink[7] + '|' + exportLink[9] + '|' + exportLink[11];
+                    if (!fileReader.ID.ProdIDMMY.Contains(idMMYKey))
+                    {
+                        exportLink[fitmentPos] = "fitment update";
+                        brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
+                    }
+                }
+            }
+        }
+        private void AddNewIDsCount(List<string> exportLink, int brandSeriesPos, int newIDCheckPosition, HashSet<string> idsPlusBrandSeries)
+        {
+            if (!fileReader.ID.ProdID.Contains(exportLink[0]))
+            {
+                exportLink[newIDCheckPosition] = "new";
+                idsPlusBrandSeries.Add(exportLink[0] + "|" + exportLink[brandSeriesPos]);
+            }
+        }
+        private void AddNewSKUCount(List<string> exportLink, int brandKayPos, HashSet<string> allSKU)
+        {
+            allSKU.Add(exportLink[brandKayPos]);
+        }
+        
+        private void AddBrands(List<string> exportLink, int brandSeriesPos, SortedSet<string> brandSeriesKey)
+        {
+            exportLink[brandSeriesPos] = exportLink[1].Remove(exportLink[1].Length - 1);
+            brandSeriesKey.Add(exportLink[brandSeriesPos]);
+        }
+        private void AddCheckColumnsToExpLinksHeader(List<string> exportLink, int problematicPos, int fitmentPos, int newIDPos, int brandSeriesPos)
+        {
+            exportLink.Insert(problematicPos, "Problematic Check");
+            exportLink.Insert(fitmentPos, "Fitment Update Check");
+            exportLink.Insert(newIDPos, "New ID Check");
+            exportLink.Insert(brandSeriesPos, "Brand+Series");
+        }
+        private void AddCheckColumnsToExpLinksEmpty(List<string> exportLink, int problematicPos, int fitmentPos, int newIDPos, int brandSeriesPos)
+        {
+            exportLink.Insert(problematicPos, string.Empty);
+            exportLink.Insert(fitmentPos, string.Empty);
+            exportLink.Insert(newIDPos, string.Empty);
+            exportLink.Insert(brandSeriesPos, string.Empty);
         }
         private void GenerateHeader()
         {
@@ -104,185 +484,8 @@ namespace Finish_Maker_Demo
 
         }
 
-        private void AddCheckColumnsToExpLinks(List<List<string>> exportLinks, int problematicPos, int fitmentPos, int newIDPos, int brandSeriesPos)
+        private void AddImgPDfVideo(int pDataBrandSeriesPosition)
         {
-            exportLinks[0].Insert(problematicPos, "Problematic Check");
-            exportLinks[0].Insert(fitmentPos, "Fitment Update Check");
-            exportLinks[0].Insert(newIDPos, "New ID Check");
-            exportLinks[0].Insert(brandSeriesPos, "Brand+Series");
-
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                exportLinks[i].Insert(problematicPos, string.Empty);
-                exportLinks[i].Insert(fitmentPos, string.Empty);
-                exportLinks[i].Insert(newIDPos, string.Empty);
-                exportLinks[i].Insert(brandSeriesPos, string.Empty);
-            }
-
-            this.exportLinks = exportLinks;
-        }
-        private void AddBrands(List<List<string>> exportLinks, int brandSeriesPos)
-        {
-            //int pDataBrandSeriesPosition = fileReader.PData.PDData1[0].Count - 2;
-            //int pDataBrandKayPosition = fileReader.PData.PDData1[0].Count - 1;
-
-            SortedSet<string> brandSeriesKey = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            //добавление колонки бренд + серия в експорт линки
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                //if (exportLinks[i][1] == "Standard®")
-                //{
-                //    for (int x = 1; x < fileReader.PData.PDData1.Count; x++)
-                //    {
-                //        if (fileReader.PData.PDData1[x][pDataBrandKayPosition] == exportLinks[i][brandKayPosition])
-                //        {
-                //            exportLinks[i][brandSeries] = fileReader.PData.PDData1[x][pDataBrandSeriesPosition];
-                //            break;
-                //        }
-                //    }
-                //}
-                //else
-                //{
-                //    exportLinks[i][brandSeries] = exportLinks[i][1].Remove(exportLinks[i][1].Length - 1);
-                //}
-                exportLinks[i][brandSeriesPos] = exportLinks[i][1].Remove(exportLinks[i][1].Length - 1);
-                brandSeriesKey.Add(exportLinks[i][brandSeriesPos]);
-            }
-
-            mainData = new string[brandSeriesKey.Count + 2, 19];
-            int positionForMainData = 2;
-
-            foreach (string s in brandSeriesKey)
-            {
-                mainData[positionForMainData, 1] = s;
-                positionForMainData++;
-
-            }
-
-            this.exportLinks = exportLinks;
-        }
-        private void AddNewSKUCount(List<List<string>> exportLinks, int brandKayPos)
-        {
-            int pDataBrandSeriesPosition = fileReader.PData.PDData1[0].Count - 2;
-            int pDataBrandKayPosition = fileReader.PData.PDData1[0].Count - 1;
-
-            HashSet<string> allSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            for (int i = 1; i < exportLinks.Count - 1; i++)
-            {
-                allSKU.Add(exportLinks[i][brandKayPos]);
-            }
-
-            for (int i = 2; i < mainData.GetLength(0); i++)
-            {
-                int newProductCount = 0;
-                for (int y = 1; y < fileReader.PData.PDData1.Count; y++)
-                {
-                    if (mainData[i, 1].ToLower() == fileReader.PData.PDData1[y][pDataBrandSeriesPosition].ToLower() && fileReader.PData.PDData1[y][2].ToLower() == "new" && allSKU.Contains(fileReader.PData.PDData1[y][pDataBrandKayPosition]))
-                    {
-                        newProductCount++;
-                    }
-                }
-                mainData[i, 3] = newProductCount.ToString();
-            }
-        }
-        private void AddNewIDsCount(List<List<string>> exportLinks, int brandSeriesPos, int newIDPos)
-        {
-            HashSet<string> idsPlusBrandSeries = new HashSet<string>();
-
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                if (!fileReader.ID.Contains(exportLinks[i][0]))
-                {
-                    exportLinks[i][newIDPos] = "new";
-                    idsPlusBrandSeries.Add(exportLinks[i][0] + "|" + exportLinks[i][brandSeriesPos]);
-                    continue;
-                }
-                exportLinks[i][newIDPos] = "old";
-            }
-
-            List<string[]> brandIDsForCheck = new List<string[]>();
-
-            foreach (string s in idsPlusBrandSeries)
-            {
-                string[] brandIDsLine = s.Split('|');
-                brandIDsForCheck.Add(brandIDsLine);
-            }
-
-            for (int i = 2; i < mainData.GetLength(0); i++)
-            {
-                int newIDsCount = 0;
-                for (int x = 0; x < brandIDsForCheck.Count; x++)
-                {
-                    if (mainData[i, 1].ToLower() == brandIDsForCheck[x][1].ToLower())
-                    {
-                        newIDsCount++;
-                    }
-                }
-                mainData[i, 4] = newIDsCount.ToString();
-            }
-
-            this.exportLinks = exportLinks;
-        }
-        private void AddFitmentUpdate(List<List<string>> exportLinks, int brandsSeriesPos, int brandKayPos, int newIDPos, int fitmentPos)
-        {
-            int pDataBrandKayPosition = fileReader.PData.PDData1[0].Count - 1;
-            HashSet<string> newSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            for (int i = 1; i < fileReader.PData.PDData1.Count; i++)
-            {
-                if (fileReader.PData.PDData1[i][2].ToLower() == "new")
-                {
-                    newSKU.Add(fileReader.PData.PDData1[i][pDataBrandKayPosition]);
-                }
-            }
-
-            HashSet<string> brandKeyPlusSKuFitmentUpdate = new HashSet<string>();
-
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                if (exportLinks[i][newIDPos] == "new")
-                {
-                    if (!newSKU.Contains(exportLinks[i][brandKayPos]) && !exportLinks[i][6].Contains("{\"not_our_mmy\":{\"unknown\":{\"unknown\":{\"0\":{"))
-                    {
-                        exportLinks[i][fitmentPos] = "fitment update";
-                        brandKeyPlusSKuFitmentUpdate.Add(exportLinks[i][brandsSeriesPos] + "|" + exportLinks[i][2]);
-                    }
-                    continue;
-                }
-
-                exportLinks[i][fitmentPos] = string.Empty;
-            }
-
-            List<string[]> fitmentUpdateForCheck = new List<string[]>();
-            string[] fitmentUpdateLine;
-
-            foreach (string s in brandKeyPlusSKuFitmentUpdate)
-            {
-                fitmentUpdateLine = s.Split('|');
-                fitmentUpdateForCheck.Add(fitmentUpdateLine);
-            }
-
-            for (int i = 2; i < mainData.GetLength(0); i++)
-            {
-                int fitmentUpdateCount = 0;
-                for (int x = 0; x < fitmentUpdateForCheck.Count; x++)
-                {
-                    if (mainData[i, 1].ToLower() == fitmentUpdateForCheck[x][0].ToLower())
-                    {
-                        fitmentUpdateCount++;
-                    }
-                }
-                mainData[i, 5] = fitmentUpdateCount.ToString();
-            }
-
-            this.exportLinks = exportLinks;
-        }
-        private void AddImgPDfVideo()
-        {
-            int pDataBrandSeriesPosition = fileReader.PData.PDData1[0].Count - 2;
-
             for (int x = 2; x < mainData.GetLength(0); x++)
             {
                 int newImageCount = 0;
@@ -336,15 +539,13 @@ namespace Finish_Maker_Demo
                 mainData[x, 8] = newVideoCount.ToString();
             }
         }
-        private void AddRanksAndRAPs()
+        private void AddRanksAndRAPs(int pData2BrandKeyPosition)
         {
-            int pDataKeyPosition = fileReader.PData.PDData2[0].Count - 1;
-
             for (int x = 2; x < mainData.GetLength(0); x++)
             {
                 for (int y = 1; y < fileReader.PData.PDData2.Count; y++)
                 {
-                    if (mainData[x, 1].ToLower() == fileReader.PData.PDData2[y][pDataKeyPosition].ToLower())
+                    if (mainData[x, 1].ToLower() == fileReader.PData.PDData2[y][pData2BrandKeyPosition].ToLower())
                     {
                         if (fileReader.PData.PDData2[y][4] != "")
                         {
@@ -362,9 +563,8 @@ namespace Finish_Maker_Demo
                 }
             }
         }
-        private void AddImprovedStructure()
+        private void AddImprovedStructure(int pDataBrandSeriesPosition)
         {
-            int pDataBrandSeriesPosition = fileReader.PData.PDData1[0].Count - 2;
             for (int x = 2; x < mainData.GetLength(0); x++)
             {
                 List<string> subtypesList = new List<string>();
@@ -394,10 +594,8 @@ namespace Finish_Maker_Demo
                 }
             }
         }
-        private void AddUpdateType()
+        private void AddUpdateType(int pDataBrandKeyPosition)
         {
-            int pDataKeyPosition = fileReader.PData.PDData2[0].Count - 1;
-
             for (int i = 2; i < mainData.GetLength(0); i++)
             {
                 mainData[i, 2] = "No Changes";
@@ -406,7 +604,7 @@ namespace Finish_Maker_Demo
                 {
                     if (updateCheck == false)
                     {
-                        if (fileReader.PData.PDData1[y][pDataKeyPosition].ToLower() == mainData[i, 1].ToLower() && fileReader.PData.PDData1[y][2] != "" && fileReader.PData.PDData1[y][2].ToLower() != "old")
+                        if (fileReader.PData.PDData1[y][pDataBrandKeyPosition].ToLower() == mainData[i, 1].ToLower() && fileReader.PData.PDData1[y][2] != "" && fileReader.PData.PDData1[y][2].ToLower() != "old")
                         {
                             mainData[i, 2] = "Updated part of the brand which was in PT";
                             break;
@@ -418,7 +616,7 @@ namespace Finish_Maker_Demo
                     }
                     else
                     {
-                        if (fileReader.PData.PDData1[y][pDataKeyPosition].ToLower() == mainData[i, 1].ToLower())
+                        if (fileReader.PData.PDData1[y][pDataBrandKeyPosition].ToLower() == mainData[i, 1].ToLower())
                         {
                             if (fileReader.PData.PDData1[y][2] == "")
                             {
@@ -455,84 +653,6 @@ namespace Finish_Maker_Demo
                 }
             }
         }
-        private void AddTotalWebsiteSKU(List<List<string>> exportLinks, int brandSeriesPos)
-        {
-            HashSet<string> skuPlusBrandsSeries = new HashSet<string>();
-
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                skuPlusBrandsSeries.Add(exportLinks[i][brandSeriesPos] + '|' + exportLinks[i][2]);
-            }
-
-            for (int i = 2; i < mainData.GetLength(0); i++)
-            {
-                int totalSKuCount = 0;
-
-                foreach (string s in skuPlusBrandsSeries)
-                {
-                    string[] dataLine = s.Split('|');
-                    if (mainData[i, 1].ToLower() == dataLine[0].ToLower())
-                    {
-                        totalSKuCount++;
-                    }
-                }
-
-                mainData[i, 11] = totalSKuCount.ToString();
-
-            }
-        }
-        private void AddProblematicSKU(List<List<string>> exportLinks, int brandSeriesPos, int problematicPos)
-        {
-            HashSet<string> problematicBrandSeriesPlusSKU = new HashSet<string>();
-
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                if (exportLinks[i][6].Contains("{\"not_our_mmy\":{\"unknown\":{\"unknown\":{\"0\":{") && exportLinks[i][5].Contains("images/no-image.jpg"))
-                {
-                    exportLinks[i][problematicPos] = "3";
-                    problematicBrandSeriesPlusSKU.Add(exportLinks[i][brandSeriesPos] + '|' + exportLinks[i][2] + '|' + exportLinks[i][problematicPos]);
-
-                }
-                else if (exportLinks[i][6].Contains("{\"not_our_mmy\":{\"unknown\":{\"unknown\":{\"0\":{"))
-                {
-                    exportLinks[i][problematicPos] = "1";
-                    problematicBrandSeriesPlusSKU.Add(exportLinks[i][brandSeriesPos] + '|' + exportLinks[i][2] + '|' + exportLinks[i][problematicPos]);
-                }
-                else if (exportLinks[i][5].Contains("images/no-image.jpg"))
-                {
-                    exportLinks[i][problematicPos] = "2";
-                    problematicBrandSeriesPlusSKU.Add(exportLinks[i][brandSeriesPos] + '|' + exportLinks[i][2] + '|' + exportLinks[i][problematicPos]);
-                }
-            }
-
-            for (int i = 2; i < mainData.GetLength(0); i++)
-            {
-                int problematicCount = 0;
-                bool misImg = false;
-
-                foreach (string s in problematicBrandSeriesPlusSKU)
-                {
-                    string[] problematicLine = s.Split('|');
-                    if (problematicLine[0].ToLower() == mainData[i, 1].ToLower())
-                    {
-                        problematicCount++;
-                        if (problematicLine[2] == "2" || problematicLine[2] == "3")
-                        {
-                            misImg = true;
-                        }
-                    }
-                }
-
-                mainData[i, 12] = problematicCount.ToString();
-                if (misImg == true)
-                {
-                    mainData[i, 14] = "Task for Designers is still in progress";
-                }
-            }
-
-            this.exportLinks = exportLinks;
-
-        }
         private void AddHeaderToMainData()
         {
             mainData[0, 0] = "Result";
@@ -553,171 +673,6 @@ namespace Finish_Maker_Demo
             mainData[1, 14] = "Unsolved Problems";
             mainData[1, 15] = "Difficulties with project";
             mainData[1, 16] = "Notes";
-        }
-        private void GenerateNewSKuList()
-        {
-            int brandKayPosition = 17;
-            int pDataBranKeyPosition = fileReader.PData.PDData1[0].Count - 1;
-            HashSet<string> newSKU = new HashSet<string>();
-
-            for (int i = 1; i < fileReader.PData.PDData1.Count; i++)
-            {
-                if (fileReader.PData.PDData1[i][2].ToLower() == "new")
-                {
-                    newSKU.Add(fileReader.PData.PDData1[i][pDataBranKeyPosition]);
-                }
-            }
-
-            List<List<string>> newProductsInfo = new List<List<string>>();
-
-            mfrPlusSKU = new HashSet<string>();
-            mfrPlusSKU.Add("Manufacturer ID|SKU");
-
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                if (newSKU.Contains(exportLinks[i][brandKayPosition]))
-                {
-                    mfrPlusSKU.Add(exportLinks[i][8] + '|' + exportLinks[i][2]);
-
-                    List<string> dataLine = new List<string>();
-                    dataLine.Add(exportLinks[i][1]);
-                    dataLine.Add("No");
-                    dataLine.Add(exportLinks[i][2]);
-                    dataLine.Add(exportLinks[i][0]);
-                    dataLine.Add(exportLinks[i][12]);
-                    dataLine.Add(exportLinks[i][7]);
-                    dataLine.Add(exportLinks[i][9]);
-                    dataLine.Add(exportLinks[i][11]);
-                    dataLine.Add(exportLinks[i][3]);
-                    dataLine.Add(exportLinks[i][4]);
-
-                    newProductsInfo.Add(dataLine);
-                }
-            }
-
-            newSKUList = new string[newProductsInfo.Count + 1, 10];
-
-            newSKUList[0, 0] = "Brand";
-            newSKUList[0, 1] = "New Series";
-            newSKUList[0, 2] = "SKU";
-            newSKUList[0, 3] = "Product ID";
-            newSKUList[0, 4] = "linkwww";
-            newSKUList[0, 5] = "Make";
-            newSKUList[0, 6] = "Model";
-            newSKUList[0, 7] = "Years";
-            newSKUList[0, 8] = "Product Name";
-            newSKUList[0, 9] = "Child Title";
-
-            for (int i = 1; i < newSKUList.GetLength(0); i++)
-            {
-                for (int x = 0; x < newSKUList.GetLength(1); x++)
-                {
-                    newSKUList[i, x] = newProductsInfo[i - 1][x];
-                }
-            }
-        }
-        private void GenerateFitmentUpdateList()
-        {
-            int fitmentUpdatePosition = 14;
-
-            HashSet<string> fitmentUpdateSet = new HashSet<string>();
-
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                if (exportLinks[i][fitmentUpdatePosition] == "fitment update")
-                {
-                    string dataList = exportLinks[i][1] + '|' + exportLinks[i][2] + '|' + exportLinks[i][12] + '|' + exportLinks[i][3];
-
-                    fitmentUpdateSet.Add(dataList);
-                }
-            }
-
-            fitmentUpdateList = new string[fitmentUpdateSet.Count + 1, 4];
-
-            fitmentUpdateList[0, 0] = "Brand";
-            fitmentUpdateList[0, 1] = "SKU";
-            fitmentUpdateList[0, 2] = "linkwww";
-            fitmentUpdateList[0, 3] = "Product Name";
-
-            int position = 1;
-            foreach (string s in fitmentUpdateSet)
-            {
-                bool check = true;
-                string[] dataList = s.Split('|');
-
-                for (int i = 1; i < position; i++)
-                {
-                    if (dataList[0] == fitmentUpdateList[i, 0] && dataList[1] == fitmentUpdateList[i, 1])
-                    {
-                        check = false;
-                        break;
-                    }
-                }
-
-                if (check == false)
-                {
-                    continue;
-                }
-
-                for (int i = 0; i < dataList.Length; i++)
-                {
-                    fitmentUpdateList[position, i] = dataList[i];
-                }
-                position++;
-            }
-
-        }
-        private void GenerateProblematicSKuList()
-        {
-            int problematicSKuPosition = 13;
-
-            HashSet<string> problematicSKuSet = new HashSet<string>();
-
-            for (int i = 1; i < exportLinks.Count; i++)
-            {
-                if (exportLinks[i][problematicSKuPosition] != "")
-                {
-                    string dataList = string.Empty;
-
-                    if (exportLinks[i][problematicSKuPosition] == "3")
-                    {
-                        dataList = exportLinks[i][1] + '|' + exportLinks[i][2] + '|' + "Live" + '|' + "Missing fitment information / Missing images" + '|' + "Request was sent / Task to designers was sent";
-
-                    }
-                    else if (exportLinks[i][problematicSKuPosition] == "1")
-                    {
-                        dataList = exportLinks[i][1] + '|' + exportLinks[i][2] + '|' + "Live" + '|' + "Missing fitment information" + '|' + "Request was sent";
-                    }
-                    else
-                    {
-                        dataList = exportLinks[i][1] + '|' + exportLinks[i][2] + '|' + "Live" + '|' + "Missing images" + '|' + "Task to designers was sent";
-                    }
-
-                    problematicSKuSet.Add(dataList);
-
-                }
-            }
-
-            problematicSKU = new string[problematicSKuSet.Count + 1, 5];
-
-            problematicSKU[0, 0] = "Brand";
-            problematicSKU[0, 1] = "SKU";
-            problematicSKU[0, 2] = "Status(Dead/Live)";
-            problematicSKU[0, 3] = "Reason";
-            problematicSKU[0, 4] = "What was done?";
-
-            int position = 1;
-            foreach (string s in problematicSKuSet)
-            {
-                string[] dataList = s.Split('|');
-
-                for (int i = 0; i < dataList.Length; i++)
-                {
-                    problematicSKU[position, i] = dataList[i];
-                }
-                position++;
-            }
-
         }
         private void GenerateChildTitleDupList()
         {
@@ -763,7 +718,10 @@ namespace Finish_Maker_Demo
         private string[,] fitmentUpdateList;
         private string[,] problematicSKU;
         private string[,] chtTitleDuplicates;
-        private HashSet<string> mfrPlusSKU;
+        private HashSet<string> mfrPlusSKU = new HashSet<string>();
+        private List<List<string>> newProductsInfo = new List<List<string>>();
+        private HashSet<string> fitmentUpdateInfo = new HashSet<string>();
+        private HashSet<string> problematicInfo = new HashSet<string>();
 
         public string[] CategoryValue
         {

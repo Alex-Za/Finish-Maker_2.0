@@ -24,7 +24,8 @@ namespace Finish_Maker_Demo
         public ObservableCollection<PD> PDList { get; set; }
         public ObservableCollection<ID> IDList { get; set; }
         public ObservableCollection<ChildTitleDuplicates> ChtDuplicatesList { get; set; }
-        
+
+        string[] ghbrjk = { "Sidorchenko", "Sidorchuk", "Sidorkidze", "Sidorkisyan", "Van Der Sidorkin", "Sidorkopulos", "Sidorenko", "Sidorkov", "Sidorski", "Sidormen", "Sidorkinyo", "Sidorishkin", "Sidorkyauskas" };
 
         public FinishMakerViewModel()
         {
@@ -34,7 +35,7 @@ namespace Finish_Maker_Demo
             ChtDuplicatesList = new ObservableCollection<ChildTitleDuplicates>();
             finishMaker.ProductDataCheck = true;
             finishMaker.ValidateFiles = true;
-            UserName = "Ivan Ivanovich";
+            UserName = "Evgeniy " + ghbrjk[new Random().Next(0, ghbrjk.Length)];
 
             worker = new BackgroundWorker();
             worker.WorkerReportsProgress = true;
@@ -292,7 +293,7 @@ namespace Finish_Maker_Demo
 
                 writer.Write();
 
-                //writer.WriteExcelFile("C:\\Programming\\C#\\Test.xlsx", fileReader.ID);
+                //writer.WriteExcelFile("C:\\Programming\\C#\\Test.xlsx", fileReader.ID.ProdIDMMY);
 
                 if (ValidateFiles == true)
                 {

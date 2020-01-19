@@ -22,10 +22,10 @@ namespace Finish_Maker_Demo
 
         private IEnumerable<List<string>> ParsExportLinks(List<string> path)
         {
-            HashSet<string> transData = new HashSet<string>();
-
             NeededColumnNameInfo neededColumnNameInfo = null;
             var headerInitialize = false;
+
+            HashSet<string> allSKUInPD = GetSKUFromPD();
 
             foreach (string filePath in path)
             {
@@ -37,43 +37,40 @@ namespace Finish_Maker_Demo
                     {
                         neededColumnNameInfo = GetNeededColumnNamesInfo(line);
                         headerInitialize = true;
-                        transData.Add(neededColumnNameInfo.HeaderNames);
-
+                        var headers = neededColumnNameInfo.HeaderNames;
+                        headers.Add("Brand+SKU");
+                        yield return headers;
+                        continue;
                     }
 
                     if (line[2] == "")
                         continue;
-                    var dataLine = string.Empty;
+
+                    var dataLine = new List<string>();
 
                     for (int i = 0; i < neededColumnNameInfo.ColumnNumbers.Count; i++)
                     {
                         for (int x = 0; x < line.Length; x++)
                         {
+
                             if (neededColumnNameInfo.ColumnNumbers[i] == x)
                             {
-                                dataLine = (dataLine != "") ? dataLine + '|' + line[x] : line[x];
+                                dataLine.Add(line[x]);
                                 break;
                             }
                         }
                     }
 
-                    transData.Add(dataLine);
+                    GetExportLinksInfo(dataLine);
+                    if (skuFromPDCheck && !allSKUInPD.Contains(dataLine[dataLine.Count - 1]))
+                        continue;
+
+                    yield return dataLine;
                 }
             }
 
-            if (skuFromPDCheck == true)
-            {
-                HashSet<string> allSKUInPD = GetSKUFromPD();
-                return GetInPDExportLinksInfo(transData, allSKUInPD);
-            }
-            else
-            {
-                return GetExportLinksInfo(transData);
-            }
-
-
         }
-
+        
         private IEnumerable<string[]> GetLineFromFile(string path)
         {
             using (StreamReader reader = new StreamReader(path))
@@ -81,10 +78,12 @@ namespace Finish_Maker_Demo
                     yield return reader.ReadLine().Split('|');
         }
 
-        private HashSet<string> ParsIDs(List<string> path)
+        private ProductID ParsIDs(List<string> path)
         {
 
-            HashSet<string> idList = new HashSet<string>();
+            ProductID productID = new ProductID();
+            productID.ProdIDMMY = null;
+            productID.ProdID = new HashSet<string>();
 
             foreach (string filePath in path)
             {
@@ -95,20 +94,39 @@ namespace Finish_Maker_Demo
                         var firstLine = reader.ReadLine().Split('|');
                         if (firstLine.Count() > 1)
                         {
-                            int productIDIndex = 0;
-                            foreach (string s in firstLine)
+                            int idIndex = 0;
+                            int makeIndex = 0;
+                            int modelIndex = 0;
+                            int yearsIndex = 0;
+                            for (int i = 0; i < firstLine.Length; i++)
                             {
-                                if (s == "Product ID")
+                                switch (firstLine[i])
                                 {
-                                    break;
+                                    case "Product ID":
+                                        idIndex = i;
+                                        break;
+                                    case "Make":
+                                        makeIndex = i;
+                                        break;
+                                    case "Model":
+                                        modelIndex = i;
+                                        break;
+                                    case "Years":
+                                        yearsIndex = i;
+                                        break;
                                 }
-                                productIDIndex++;
                             }
 
                             while (!reader.EndOfStream)
                             {
+                                if (productID.ProdIDMMY == null)
+                                {
+                                    productID.ProdIDMMY = new HashSet<string>();
+                                }
+
                                 var line = reader.ReadLine().Split('|');
-                                idList.Add(line[productIDIndex]);
+                                productID.ProdID.Add(line[idIndex]);
+                                productID.ProdIDMMY.Add(line[idIndex] + '|' + line[makeIndex] + '|' + line[modelIndex] + '|' + line[yearsIndex]);
                             }
                         }
                         else
@@ -116,12 +134,9 @@ namespace Finish_Maker_Demo
                             while (!reader.EndOfStream)
                             {
                                 var line = reader.ReadLine();
-
-                                idList.Add(line);
-
+                                productID.ProdID.Add(line);
                             }
                         }
-
                     }
                 }
                 else if (Path.GetExtension(filePath) == ".xlsx")
@@ -147,28 +162,48 @@ namespace Finish_Maker_Demo
                         }
 
                         int idIndex = 0;
-                        foreach (string s in dataList)
+                        int makeIndex = 0;
+                        int modelIndex = 0;
+                        int yearsIndex = 0;
+                        for (int i = 0; i < dataList.Count; i++)
                         {
-                            if (s == "Product ID")
+                            switch (dataList[i])
                             {
-                                break;
+                                case "Product ID":
+                                    idIndex = i;
+                                    break;
+                                case "Make":
+                                    makeIndex = i;
+                                    break;
+                                case "Model":
+                                    modelIndex = i;
+                                    break;
+                                case "Years":
+                                    yearsIndex = i;
+                                    break;
                             }
-                            idIndex++;
+                        }
+
+                        if (productID.ProdIDMMY == null)
+                        {
+                            productID.ProdIDMMY = new HashSet<string>();
                         }
 
                         foreach (Row row in sheetData.Elements<Row>())
                         {
                             Cell cell = row.Descendants<Cell>().ElementAt(idIndex - 1);
-                            int actualCellIndex = CellReferenceToIndex(cell);
-                            idList.Add(GetCellValue(spreadsheetDocument, cell));
-                        }
+                            Cell cell2 = row.Descendants<Cell>().ElementAt(makeIndex - 1);
+                            Cell cell3 = row.Descendants<Cell>().ElementAt(modelIndex - 1);
+                            Cell cell4 = row.Descendants<Cell>().ElementAt(yearsIndex - 1);
 
+                            productID.ProdID.Add(GetCellValue(spreadsheetDocument, cell));
+                            productID.ProdIDMMY.Add(GetCellValue(spreadsheetDocument, cell) + '|' + GetCellValue(spreadsheetDocument, cell2) + '|' + GetCellValue(spreadsheetDocument, cell3) + '|' + GetCellValue(spreadsheetDocument, cell4));
+                        }
                     }
                 }
-
             }
 
-            return idList;
+            return productID;
         }
 
         private IEnumerable<List<string>> ParsChildTitleDuplicates(List<string> path)
@@ -191,38 +226,86 @@ namespace Finish_Maker_Demo
 
             foreach (string filePath in path)
             {
-                List<List<string>> dataSheet1 = new List<List<string>>();
-                List<List<string>> dataSheet2 = new List<List<string>>();
-
-                using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
+                if (Path.GetExtension(filePath) == ".xlsx")
                 {
+                    List<List<string>> dataSheet1 = new List<List<string>>();
+                    List<List<string>> dataSheet2 = new List<List<string>>();
+
+                    using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
+                    {
+                        if (productData.PDData1 != null)
+                        {
+                            dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, true);
+                            AddKeyPDSheet1(dataSheet1);
+                            dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, true);
+                            AddKeyPDSheet2(dataSheet2);
+                        }
+                        else
+                        {
+                            dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, false);
+                            AddKeyPDSheet1(dataSheet1);
+                            dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, false);
+                            AddKeyPDSheet2(dataSheet2);
+                        }
+
+                    }
+
                     if (productData.PDData1 != null)
                     {
-                        dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, true);
-                        dataSheet1 = AddKeyPDSheet1(dataSheet1);
-                        dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, true);
-                        dataSheet2 = AddKeyPDSheet2(dataSheet2);
+                        productData.PDData1 = productData.PDData1.Concat(dataSheet1).ToList();
+                        productData.PDData2 = productData.PDData2.Concat(dataSheet2).ToList();
                     }
                     else
                     {
-                        dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, false);
-                        dataSheet1 = AddKeyPDSheet1(dataSheet1);
-                        dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, false);
-                        dataSheet2 = AddKeyPDSheet2(dataSheet2);
+                        productData.PDData1 = dataSheet1;
+                        productData.PDData2 = dataSheet2;
                     }
-                    
+                }
+                else if (Path.GetExtension(filePath) == ".csv")
+                {
+                    List<List<string>> dataSheet1 = new List<List<string>>();
+                    List<List<string>> dataSheet2 = new List<List<string>>();
+                    using (StreamReader reader = new StreamReader(filePath))
+                    {
+                        while (!reader.EndOfStream)
+                        {
+                            var line = reader.ReadLine().Split('|');
+                            List<string> dataLine1 = new List<string>();
+                            List<string> dataLine2 = new List<string>();
+                            for (int i = 0; i < 11; i++)
+                            {
+                                dataLine1.Add(line[i]);
+                            }
+
+                            if (line[11]!="")
+                            {
+                                for (int i = 11; i < 16; i++)
+                                {
+                                    dataLine2.Add(line[i]);
+                                }
+                                dataSheet2.Add(dataLine2);
+                            }
+                            dataSheet1.Add(dataLine1);
+                        }
+                    }
+
+                    AddKeyPDSheet1(dataSheet1);
+                    AddKeyPDSheet2(dataSheet2);
+
+                    if (productData.PDData1 != null)
+                    {
+                        productData.PDData1 = productData.PDData1.Concat(dataSheet1).ToList();
+                        productData.PDData2 = productData.PDData2.Concat(dataSheet2).ToList();
+                    }
+                    else
+                    {
+                        productData.PDData1 = dataSheet1;
+                        productData.PDData2 = dataSheet2;
+                    }
+
                 }
 
-                if (productData.PDData1 != null)
-                {
-                    productData.PDData1 = productData.PDData1.Concat(dataSheet1).ToList();
-                    productData.PDData2 = productData.PDData2.Concat(dataSheet2).ToList();
-                }
-                else
-                {
-                    productData.PDData1 = dataSheet1;
-                    productData.PDData2 = dataSheet2;
-                }
+                
             }
 
             return productData;
@@ -234,23 +317,26 @@ namespace Finish_Maker_Demo
             get
             {
                 if (exportLinks == null)
-                    exportLinks = ParsExportLinks(pathes[0]).ToList();
-
+                {
+                    exportLinks = ParsExportLinks(pathes[0]);
+                }
                 return exportLinks;
             }
         }
-        private HashSet<string> iD;
-        public HashSet<string> ID
+
+        private ProductID id;
+        public ProductID ID
         {
             get
             {
-                if (iD == null)
+                if (id == null)
                 {
-                    iD = ParsIDs(pathes[2]);
+                    id = ParsIDs(pathes[2]);
                 }
-                return iD;
+                return id;
             }
         }
+
         private List<List<string>> chtTitleDuplicates;
         public List<List<string>> ChtTitleDuplicates
         {
@@ -285,45 +371,13 @@ namespace Finish_Maker_Demo
             }
         }
 
-        private IEnumerable<List<string>> GetExportLinksInfo(HashSet<string> transData)
-        {
-            List<string> firstLine = transData.First().Split('|').ToList();
-            firstLine.Add("Brand+SKU");
-            yield return firstLine;
-
-            foreach (string data in transData.Skip(1))
-            {
-                List<string> dataLine = data.Split('|').ToList();
-                dataLine.Add(dataLine[1] + dataLine[2]);
-                yield return dataLine;
-            }
-
-        }
-        private IEnumerable<List<string>> GetInPDExportLinksInfo(HashSet<string> transData, HashSet<string> allSKUInPD)
-        {
-
-            string firstLineTransData = transData.First();
-            List<string> firstLineTransDataList = firstLineTransData.Split('|').ToList();
-
-            firstLineTransDataList.Add("Brand+SKU");
-            yield return firstLineTransDataList;
-
-            foreach (string data in transData)
-            {
-                List<string> dataLine = data.Split('|').ToList();
-                dataLine.Add(dataLine[1] + dataLine[2]);
-
-                if (!allSKUInPD.Contains(dataLine[dataLine.Count - 1]))
-                    continue;
-
-                yield return dataLine;
-            }
-
-        }
+        private void GetExportLinksInfo(List<string> dataLine)
+            => dataLine.Add(dataLine[1] + dataLine[2]);
         private NeededColumnNameInfo GetNeededColumnNamesInfo(string[] headers)
         {
             NeededColumnNameInfo columnNameInfo = new NeededColumnNameInfo();
             columnNameInfo.ColumnNumbers = new List<int>();
+            columnNameInfo.HeaderNames = new List<string>();
 
             string[] neededColumNames = { "Product ID", "Brand", "SKU", "Product Name", "Child Title", "Images", "MMY", "Make", "Manufacturer ID", "Model", "Template", "Years", "linkwww" };
 
@@ -335,7 +389,7 @@ namespace Finish_Maker_Demo
                     {
                         columnNameInfo.ColumnNumbers.Add(x);
 
-                        columnNameInfo.HeaderNames = (!String.IsNullOrEmpty(columnNameInfo.HeaderNames)) ? columnNameInfo.HeaderNames + '|' + headers[x] : headers[x];
+                        columnNameInfo.HeaderNames.Add(headers[x]);
                         break;
                     }
                 }
@@ -358,7 +412,7 @@ namespace Finish_Maker_Demo
         }
         class NeededColumnNameInfo
         {
-            public string HeaderNames { get; set; }
+            public List<string> HeaderNames { get; set; }
             public List<int> ColumnNumbers { get; set; }
         }
 
@@ -440,10 +494,9 @@ namespace Finish_Maker_Demo
             return dataSheet;
         }
 
-        private List<List<string>> AddKeyPDSheet1(List<List<string>> sheetData1)
+        private void AddKeyPDSheet1(List<List<string>> sheetData1)
         {
-            List<List<string>> sheetDataWithKey = sheetData1;
-            foreach (List<string> lineData in sheetDataWithKey)
+            foreach (List<string> lineData in sheetData1)
             {
                 //if (lineData[0] == "Standard®" && lineData[10] != "")
                 //{
@@ -454,18 +507,13 @@ namespace Finish_Maker_Demo
 
                 lineData.Add(lineData[0] + lineData[1]); // добавление колонки бренд + ску
             }
-
-            return sheetDataWithKey;
         }
-        private List<List<string>> AddKeyPDSheet2(List<List<string>> sheetData2)
+        private void AddKeyPDSheet2(List<List<string>> sheetData2)
         {
-            List<List<string>> sheetData2WithKey = sheetData2;
-            foreach (List<string> lineData in sheetData2WithKey)
+            foreach (List<string> lineData in sheetData2)
             {
                 lineData.Add(lineData[0].Remove(lineData[0].Length - 1));
             }
-
-            return sheetData2WithKey;
         }
     }
 

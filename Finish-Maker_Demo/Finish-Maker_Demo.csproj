@@ -82,9 +82,11 @@
     <Compile Include="FileReader.cs" />
     <Compile Include="FinishMakerModel.cs" />
     <Compile Include="ID.cs" />
+    <Compile Include="ListComparer.cs" />
     <Compile Include="Mistakes.cs" />
     <Compile Include="Processing.cs" />
     <Compile Include="PD.cs" />
+    <Compile Include="ProductID.cs" />
     <Compile Include="RelayCommand.cs" />
     <Compile Include="Writer.cs" />
     <Page Include="MainWindow.xaml">

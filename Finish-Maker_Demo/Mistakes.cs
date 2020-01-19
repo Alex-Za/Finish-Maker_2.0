@@ -76,9 +76,9 @@ namespace Finish_Maker_Demo
 
             foreach (string s in pathes[1])
             {
-                if (Path.GetExtension(s) != ".xlsx")
+                if (Path.GetExtension(s) != ".xlsx" && Path.GetExtension(s) != ".csv")
                 {
-                    criticalErrors += "Файл PD имеет некорректное расширение, измените путь на формат .xlsx" + Environment.NewLine;
+                    criticalErrors += "Файл PD имеет некорректное расширение, измените путь на формат .xlsx или .csv" + Environment.NewLine;
                     return;
                 }
             }
@@ -95,61 +95,65 @@ namespace Finish_Maker_Demo
 
             foreach (string path in pathes[1])
             {
-                using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(path, false))
+                if (Path.GetExtension(path) == ".xlsx")
                 {
-                    WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
-
-                    if (workbookPart.Workbook.Sheets.Count() < 2)
+                    using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(path, false))
                     {
-                        criticalErrors += "В файле продукт даты нет необходимых листов" + Environment.NewLine;
-                        return;
-                    }
+                        WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
 
-                    Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().ElementAt(0);
-                    Worksheet worksheet = ((WorksheetPart)workbookPart.GetPartById(sheet.Id)).Worksheet;
-                    SheetData sheetData = worksheet.Elements<SheetData>().First();
-
-                    int headerColumnCount = sheetData.ElementAt(0).ChildElements.Count;
-
-                    if (headerColumnCount != 11)
-                    {
-                        criticalErrors += "Некорректное количество колонок на первом листе продукт даты" + Environment.NewLine;
-                        return;
-                    }
-
-                    Sheet sheet2 = workbookPart.Workbook.Descendants<Sheet>().ElementAt(1);
-                    Worksheet worksheet2 = ((WorksheetPart)workbookPart.GetPartById(sheet2.Id)).Worksheet;
-                    SheetData sheetData2 = worksheet2.Elements<SheetData>().First();
-
-                    int headerColumnCount2 = sheetData2.ElementAt(0).ChildElements.Count;
-
-                    if (headerColumnCount2 != 5)
-                    {
-                        criticalErrors += "Некорректное количество колонок на втором листе продукт даты" + Environment.NewLine;
-                        return;
-                    }
-
-                    for (int i = 1; i < fileReader.PData.PDData1.Count; i++)
-                    {
-                        if (fileReader.PData.PDData1[i][0] == "")
+                        if (workbookPart.Workbook.Sheets.Count() < 2)
                         {
-                            criticalErrors += "Пустое значение на первом листе продукт даты в колонке Brand, строка " + i + Environment.NewLine;
+                            criticalErrors += "В файле продукт даты нет необходимых листов" + Environment.NewLine;
+                            return;
                         }
-                        if (fileReader.PData.PDData1[i][1] == "")
-                        {
-                            criticalErrors += "Пустое значение на первом листе продукт даты в колонке SKU, строка " + i + Environment.NewLine;
-                        }
-                        if (fileReader.PData.PDData1[i][5] == "" || fileReader.PData.PDData1[i][6] == "")
-                        {
-                            criticalErrors += "Пустое значение на первом листе продукт даты в колонках CategoryName or SubtypeName, строка " + i + Environment.NewLine;
-                        }
-                    }
 
-                    if (criticalErrors != null)
-                    {
-                        return;
+                        Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().ElementAt(0);
+                        Worksheet worksheet = ((WorksheetPart)workbookPart.GetPartById(sheet.Id)).Worksheet;
+                        SheetData sheetData = worksheet.Elements<SheetData>().First();
+
+                        int headerColumnCount = sheetData.ElementAt(0).ChildElements.Count;
+
+                        if (headerColumnCount != 11)
+                        {
+                            criticalErrors += "Некорректное количество колонок на первом листе продукт даты" + Environment.NewLine;
+                            return;
+                        }
+
+                        Sheet sheet2 = workbookPart.Workbook.Descendants<Sheet>().ElementAt(1);
+                        Worksheet worksheet2 = ((WorksheetPart)workbookPart.GetPartById(sheet2.Id)).Worksheet;
+                        SheetData sheetData2 = worksheet2.Elements<SheetData>().First();
+
+                        int headerColumnCount2 = sheetData2.ElementAt(0).ChildElements.Count;
+
+                        if (headerColumnCount2 != 5)
+                        {
+                            criticalErrors += "Некорректное количество колонок на втором листе продукт даты" + Environment.NewLine;
+                            return;
+                        }
+
+                        for (int i = 1; i < fileReader.PData.PDData1.Count; i++)
+                        {
+                            if (fileReader.PData.PDData1[i][0] == "")
+                            {
+                                criticalErrors += "Пустое значение на первом листе продукт даты в колонке Brand, строка " + i + Environment.NewLine;
+                            }
+                            if (fileReader.PData.PDData1[i][1] == "")
+                            {
+                                criticalErrors += "Пустое значение на первом листе продукт даты в колонке SKU, строка " + i + Environment.NewLine;
+                            }
+                            if (fileReader.PData.PDData1[i][5] == "" || fileReader.PData.PDData1[i][6] == "")
+                            {
+                                criticalErrors += "Пустое значение на первом листе продукт даты в колонках CategoryName or SubtypeName, строка " + i + Environment.NewLine;
+                            }
+                        }
+
+                        if (criticalErrors != null)
+                        {
+                            return;
+                        }
                     }
                 }
+                
             }
 
             HashSet<string> differentRegistrBrand = new HashSet<string>();
