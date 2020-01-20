@@ -265,10 +265,22 @@ namespace Finish_Maker_Demo
                 {
                     List<List<string>> dataSheet1 = new List<List<string>>();
                     List<List<string>> dataSheet2 = new List<List<string>>();
+                    bool headerInitialize = false;
+                    if (productData.PDData1 != null)
+                    {
+                        headerInitialize = true;
+                    }
+
                     using (StreamReader reader = new StreamReader(filePath))
                     {
                         while (!reader.EndOfStream)
                         {
+                            if (headerInitialize)
+                            {
+                                reader.ReadLine();
+                                headerInitialize = false;
+                                continue;
+                            }
                             var line = reader.ReadLine().Split('|');
                             List<string> dataLine1 = new List<string>();
                             List<string> dataLine2 = new List<string>();

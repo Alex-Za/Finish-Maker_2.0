@@ -57,14 +57,17 @@ namespace Finish_Maker_Demo
                 return addExpLinksCommand ??
                   (addExpLinksCommand = new RelayCommand(obj =>
                   {
-                      OpenFileDialog openFileDialog = new OpenFileDialog();
+                      OpenFileDialog openFileDialog = new OpenFileDialog { Multiselect = true };
                       if (openFileDialog.ShowDialog() == true)
                       {
-                          ExportLinks exportLinks = new ExportLinks();
-                          exportLinks.Path = openFileDialog.FileName;
-                          exportLinks.ViewPath = openFileDialog.FileName.Substring(openFileDialog.FileName.LastIndexOf("\\") + 1);
-                          exportLinks.ID = ExpLinksList.Count + 1;
-                          ExpLinksList.Add(exportLinks);
+                          foreach (string file in openFileDialog.FileNames)
+                          {
+                              ExportLinks exportLinks = new ExportLinks();
+                              exportLinks.Path = file;
+                              exportLinks.ViewPath = file.Substring(file.LastIndexOf("\\") + 1);
+                              exportLinks.ID = ExpLinksList.Count + 1;
+                              ExpLinksList.Add(exportLinks);
+                          }
                       }
                   }));
             }
@@ -76,14 +79,17 @@ namespace Finish_Maker_Demo
                 return addPDCommand ??
                   (addPDCommand = new RelayCommand(obj =>
                   {
-                      OpenFileDialog openFileDialog = new OpenFileDialog();
+                      OpenFileDialog openFileDialog = new OpenFileDialog { Multiselect = true };
                       if (openFileDialog.ShowDialog() == true)
                       {
-                          PD pdLinks = new PD();
-                          pdLinks.Path = openFileDialog.FileName;
-                          pdLinks.ViewPath = openFileDialog.FileName.Substring(openFileDialog.FileName.LastIndexOf("\\") + 1);
-                          pdLinks.ID = PDList.Count + 1;
-                          PDList.Add(pdLinks);
+                          foreach (string file in openFileDialog.FileNames)
+                          {
+                              PD pdLinks = new PD();
+                              pdLinks.Path = file;
+                              pdLinks.ViewPath = file.Substring(file.LastIndexOf("\\") + 1);
+                              pdLinks.ID = PDList.Count + 1;
+                              PDList.Add(pdLinks);
+                          }
                       }
                   }));
             }
@@ -95,14 +101,17 @@ namespace Finish_Maker_Demo
                 return addIDCommand ??
                   (addIDCommand = new RelayCommand(obj =>
                   {
-                      OpenFileDialog openFileDialog = new OpenFileDialog();
+                      OpenFileDialog openFileDialog = new OpenFileDialog { Multiselect = true };
                       if (openFileDialog.ShowDialog() == true)
                       {
-                          ID idList = new ID();
-                          idList.Path = openFileDialog.FileName;
-                          idList.ViewPath = openFileDialog.FileName.Substring(openFileDialog.FileName.LastIndexOf("\\") + 1);
-                          idList.ID = IDList.Count + 1;
-                          IDList.Add(idList);
+                          foreach (string file in openFileDialog.FileNames)
+                          {
+                              ID idList = new ID();
+                              idList.Path = file;
+                              idList.ViewPath = file.Substring(file.LastIndexOf("\\") + 1);
+                              idList.ID = IDList.Count + 1;
+                              IDList.Add(idList);
+                          }
                       }
                   }));
             }
@@ -114,14 +123,17 @@ namespace Finish_Maker_Demo
                 return addChtDuplicatesCommand ??
                   (addChtDuplicatesCommand = new RelayCommand(obj =>
                   {
-                      OpenFileDialog openFileDialog = new OpenFileDialog();
+                      OpenFileDialog openFileDialog = new OpenFileDialog { Multiselect = true };
                       if (openFileDialog.ShowDialog() == true)
                       {
-                          ChildTitleDuplicates chtList = new ChildTitleDuplicates();
-                          chtList.Path = openFileDialog.FileName;
-                          chtList.ViewPath = openFileDialog.FileName.Substring(openFileDialog.FileName.LastIndexOf("\\") + 1);
-                          chtList.ID = ChtDuplicatesList.Count + 1;
-                          ChtDuplicatesList.Add(chtList);
+                          foreach (string file in openFileDialog.FileNames)
+                          {
+                              ChildTitleDuplicates chtList = new ChildTitleDuplicates();
+                              chtList.Path = file;
+                              chtList.ViewPath = file.Substring(file.LastIndexOf("\\") + 1);
+                              chtList.ID = ChtDuplicatesList.Count + 1;
+                              ChtDuplicatesList.Add(chtList);
+                          }
                       }
                   }));
             }
