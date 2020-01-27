@@ -30,6 +30,7 @@ namespace Finish_Maker_Demo
             int pDataBrandSeriesPosition = fileReader.PData.PDData1[0].Count - 2;
             int pDataBrandKeyPosition = fileReader.PData.PDData1[0].Count - 1;
             int pData2BrandKeyPosition = fileReader.PData.PDData2[0].Count - 1;
+            SortedSet<string> brands = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             SortedSet<string> brandSeriesKey = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> allSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> idsPlusBrandSeries = new HashSet<string>();
@@ -57,7 +58,7 @@ namespace Finish_Maker_Demo
                 }
 
                 AddCheckColumnsToExpLinksEmpty(row, problematicSKUPosition, fitmUpdatePosition, newIDCheckPosition, brandSeriesPosition);
-                AddBrands(row, brandSeriesPosition, brandSeriesKey);
+                AddBrands(row, brandSeriesPosition, brandSeriesKey, brands);
                 AddNewSKUCount(row, brandKeyPosition, allSKU);
                 AddNewIDsCount(row, brandSeriesPosition, newIDCheckPosition, idsPlusBrandSeries);
                 AddFitmentUpdate(row, brandSeriesPosition, brandKeyPosition, newIDCheckPosition, fitmUpdatePosition, brandKeyPlusSKuFitmentUpdate, newSKU, fitmentUpdateSKU);
@@ -68,7 +69,7 @@ namespace Finish_Maker_Demo
                 AddProblematicInfo(row, problematicSKUPosition);
                 AddMfrPlusSKU(row, newSKU, brandKeyPosition);
             }
-
+            GenerateJobberApp(brands);
             GeneratingMainDataTabels(brandSeriesKey, pDataBrandSeriesPosition, allSKU, pDataBrandKeyPosition, idsPlusBrandSeries, brandKeyPlusSKuFitmentUpdate, skuPlusBrandsSeries, problematicBrandSeriesPlusSKU);
 
             AddImgPDfVideo(pDataBrandSeriesPosition);
@@ -191,7 +192,7 @@ namespace Finish_Maker_Demo
                 string dataLine = string.Empty;
                 if (exportLink[problematicSKUPosition] == "3")
                 {
-                    dataLine = exportLink[1] + "|" + exportLink[2] + "|Line|Missing fitment information / Missing images|Request was sent / Task to designers was sent";
+                    dataLine = exportLink[1] + "|" + exportLink[2] + "|Live|Missing fitment information / Missing images|Request was sent / Task to designers was sent";
                 }
                 else if (exportLink[problematicSKUPosition] == "1")
                 {
@@ -375,18 +376,18 @@ namespace Finish_Maker_Demo
                     brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
                 }
             }
-            else
-            {
-                if (fileReader.ID.ProdIDMMY != null)
-                {
-                    string idMMYKey = exportLink[0] + '|' + exportLink[7] + '|' + exportLink[9] + '|' + exportLink[11];
-                    if (!fileReader.ID.ProdIDMMY.Contains(idMMYKey))
-                    {
-                        exportLink[fitmentPos] = "fitment update";
-                        brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
-                    }
-                }
-            }
+            //else
+            //{
+            //    if (fileReader.ID.ProdIDMMY != null)
+            //    {
+            //        string idMMYKey = exportLink[0] + '|' + exportLink[7] + '|' + exportLink[9] + '|' + exportLink[11];
+            //        if (!fileReader.ID.ProdIDMMY.Contains(idMMYKey))
+            //        {
+            //            exportLink[fitmentPos] = "fitment update";
+            //            brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
+            //        }
+            //    }
+            //}
         }
         private void AddNewIDsCount(List<string> exportLink, int brandSeriesPos, int newIDCheckPosition, HashSet<string> idsPlusBrandSeries)
         {
@@ -401,10 +402,11 @@ namespace Finish_Maker_Demo
             allSKU.Add(exportLink[brandKayPos]);
         }
         
-        private void AddBrands(List<string> exportLink, int brandSeriesPos, SortedSet<string> brandSeriesKey)
+        private void AddBrands(List<string> exportLink, int brandSeriesPos, SortedSet<string> brandSeriesKey, SortedSet<string> brands)
         {
             exportLink[brandSeriesPos] = exportLink[1].Remove(exportLink[1].Length - 1);
             brandSeriesKey.Add(exportLink[brandSeriesPos]);
+            brands.Add(exportLink[1]);
         }
         private void AddCheckColumnsToExpLinksHeader(List<string> exportLink, int problematicPos, int fitmentPos, int newIDPos, int brandSeriesPos)
         {
@@ -451,15 +453,8 @@ namespace Finish_Maker_Demo
             header[1, 7] = "PRODUCT CATEGORY:";
             header[1, 10] = CategoryValue[1];
         }
-        private void GenerateJobberApp()
+        private void GenerateJobberApp(SortedSet<string> brands)
         {
-            SortedSet<string> brands = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            for (int i = 1; i < fileReader.PData.PDData1.Count; i++)
-            {
-                brands.Add(fileReader.PData.PDData1[i][0]);
-            }
-
             jobberApp = new string[brands.Count + 1, 19];
 
             jobberApp[0, 0] = "Brand / Input Data";
@@ -762,7 +757,7 @@ namespace Finish_Maker_Demo
             {
                 if (jobberApp == null)
                 {
-                    GenerateJobberApp();
+                    GenerateMainData();
                 }
                 return jobberApp;
             }

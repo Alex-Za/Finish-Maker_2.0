@@ -269,73 +269,83 @@ namespace Finish_Maker_Demo
 
             if (fd.ShowDialog() == true)
             {
-                string saveFilePath = Path.GetDirectoryName(fd.FileName);
-
-                Stopwatch stopWatch = new Stopwatch();
-                stopWatch.Start();
-
-                ConsoleTextProperty = new ConsoleText { TheText = "In progress..." + Environment.NewLine, TheColor = Brushes.Black };
-
-                List<List<string>> filePath = GetAllPathes(ExpLinksList, PDList, IDList, ChtDuplicatesList);
-
-                FileReader fileReader = new FileReader(filePath, IsSelectedPDCheck);
-
-                changeProgress(10);
-                Mistakes mistakesCheck = new Mistakes(fileReader, filePath, IsSelectedPDCheck);
-
-                if (ValidateFiles == true)
+                try
                 {
-                    if (mistakesCheck.CriticalErrors != null)
+                    string saveFilePath = Path.GetDirectoryName(fd.FileName);
+
+                    Stopwatch stopWatch = new Stopwatch();
+                    stopWatch.Start();
+
+                    ConsoleTextProperty = new ConsoleText { TheText = "In progress..." + Environment.NewLine, TheColor = Brushes.Black };
+
+                    List<List<string>> filePath = GetAllPathes(ExpLinksList, PDList, IDList, ChtDuplicatesList);
+
+                    FileReader fileReader = new FileReader(filePath, IsSelectedPDCheck);
+
+                    changeProgress(10);
+                    Mistakes mistakesCheck = new Mistakes(fileReader, filePath, IsSelectedPDCheck);
+
+                    if (ValidateFiles == true)
                     {
-                        ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.CriticalErrors };
-                        ConsoleTextProperty = someConsoleText;
-                        changeProgress(0);
-                        return;
+                        if (mistakesCheck.CriticalErrors != null)
+                        {
+                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.CriticalErrors };
+                            ConsoleTextProperty = someConsoleText;
+                            changeProgress(0);
+                            return;
+                        }
+
+                        if (mistakesCheck.OtherErrors != null)
+                        {
+                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.OtherErrors };
+                            ConsoleTextProperty = someConsoleText;
+                        }
                     }
 
-                    if (mistakesCheck.OtherErrors != null)
+                    Processing processing = new Processing(fileReader, UserName);
+                    Writer writer = new Writer(processing, changeProgress, saveFilePath);
+
+                    writer.Write();
+
+                    //writer.WriteExcelFile("C:\\Programming\\C#\\Test.xlsx", fileReader.ID.ProdIDMMY);
+
+                    if (ValidateFiles == true)
                     {
-                        ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.OtherErrors };
-                        ConsoleTextProperty = someConsoleText;
-                    }
-                }
-
-                Processing processing = new Processing(fileReader, UserName);
-                Writer writer = new Writer(processing, changeProgress, saveFilePath);
-
-                writer.Write();
-
-                //writer.WriteExcelFile("C:\\Programming\\C#\\Test.xlsx", fileReader.ID.ProdIDMMY);
-
-                if (ValidateFiles == true)
-                {
-                    if (mistakesCheck.OtherErrors != null)
-                    {
-                        ConsoleText someConsoleText = ConsoleTextProperty;
-                        someConsoleText.TheText += "Done";
-                        ConsoleTextProperty = someConsoleText;
+                        if (mistakesCheck.OtherErrors != null)
+                        {
+                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = ConsoleTextProperty.TheText };
+                            someConsoleText.TheText += "Done";
+                            ConsoleTextProperty = someConsoleText;
+                        }
+                        else
+                        {
+                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Black, TheText = "Done" };
+                            ConsoleTextProperty = someConsoleText;
+                        }
                     }
                     else
                     {
                         ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Black, TheText = "Done" };
                         ConsoleTextProperty = someConsoleText;
                     }
+
+                    changeProgress(100);
+
+                    stopWatch.Stop();
+                    TimeSpan ts = stopWatch.Elapsed;
+
+                    string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}", ts.Hours, ts.Minutes, ts.Seconds);
+
+                    ConsoleText workingTime = ConsoleTextProperty;
+                    workingTime.TheText += Environment.NewLine + "Время работы программы: " + elapsedTime;
+                    ConsoleTextProperty = workingTime;
                 }
-                else
+                catch (Exception ex)
                 {
-                    ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Black, TheText = "Done" };
-                    ConsoleTextProperty = someConsoleText;
+                    ConsoleTextProperty = new ConsoleText { TheText = "Произошла ошибка: " + ex, TheColor = Brushes.Red };
                 }
-
-                stopWatch.Stop();
-                TimeSpan ts = stopWatch.Elapsed;
-
-                string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}", ts.Hours, ts.Minutes, ts.Seconds);
-
-                ConsoleText workingTime = ConsoleTextProperty;
-                workingTime.TheText += Environment.NewLine + "Время работы программы: " + elapsedTime;
-                ConsoleTextProperty = workingTime;
-                }
+                
+            }
             
         }
 

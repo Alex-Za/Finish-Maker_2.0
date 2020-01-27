@@ -81,7 +81,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
             </StackPanel>
-            <StackPanel Style="{StaticResource stdStackPanel}" ToolTip="Select PD.xlsx file">
+            <StackPanel Style="{StaticResource stdStackPanel}" ToolTip="Select PD.xlsx or .csv file">
                 <Button Command="{Binding AddPDCommand}" Style="{StaticResource stdButton}" Content="PD"/>
                 <ListBox ItemsSource="{Binding PDList}" x:Name="PDListBox" Width="415" Margin="5 0 0 0" Height="40" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ListBox.ItemsPanel>

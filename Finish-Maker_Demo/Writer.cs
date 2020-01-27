@@ -104,8 +104,6 @@ namespace Finish_Maker_Demo
 
             WriteChildDupList(worksheet);
 
-            changeProgress(90);
-
             //финиш
             worksheet = workbook.Worksheets[1];
             worksheet.Activate();
@@ -152,7 +150,8 @@ namespace Finish_Maker_Demo
 
             CreateWbForTask(saveFilePath);
 
-            changeProgress(100);
+            changeProgress(90);
+
         }
         private string CheckForSlash(string value)
         {
