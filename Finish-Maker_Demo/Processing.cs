@@ -10,11 +10,13 @@ namespace Finish_Maker_Demo
     {
         private FileReader fileReader;
         public string userName;
+        private bool fitmentUpdateCheck;
         private IEnumerable<List<string>> exportLinks;
-        public Processing(FileReader reader, string userName)
+        public Processing(FileReader reader, string userName, bool fitmentUpdateCheck)
         {
             fileReader = reader;
             this.userName = userName;
+            this.fitmentUpdateCheck = fitmentUpdateCheck;
         }
 
         private void GenerateMainData()
@@ -321,6 +323,7 @@ namespace Finish_Maker_Demo
                     newSKUList[i, x] = newProductsInfo[i - 1][x];
                 }
             }
+
         }
         private void AddProblematicSKU(List<string> exportLink, int brandSeriesPos, int problematicPos, HashSet<string> problematicBrandSeriesPlusSKU)
         {
@@ -361,21 +364,33 @@ namespace Finish_Maker_Demo
         }
         private void AddFitmentUpdate(List<string> exportLink, int brandsSeriesPos, int brandKayPos, int newIDPos, int fitmentPos, HashSet<string> brandKeyPlusSKuFitmentUpdate, HashSet<string> newSKU, HashSet<string> fitmentUpdateSKU)
         {
-            if (fitmentUpdateSKU.Contains(exportLink[brandKayPos]))
+            if (fitmentUpdateCheck)
             {
-                exportLink[fitmentPos] = "fitment update";
-                brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
-                return;
-            }
-
-            if (exportLink[newIDPos] == "new")
-            {
-                if (!newSKU.Contains(exportLink[brandKayPos]) && !exportLink[6].Contains("{\"not_our_mmy\":{\"unknown\":{\"unknown\":{\"0\":{"))
+                if (fitmentUpdateSKU.Contains(exportLink[brandKayPos]))
                 {
                     exportLink[fitmentPos] = "fitment update";
                     brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
                 }
             }
+            else
+            {
+                if (fitmentUpdateSKU.Contains(exportLink[brandKayPos]))
+                {
+                    exportLink[fitmentPos] = "fitment update";
+                    brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
+                    return;
+                }
+
+                if (exportLink[newIDPos] == "new")
+                {
+                    if (!newSKU.Contains(exportLink[brandKayPos]) && !exportLink[6].Contains("{\"not_our_mmy\":{\"unknown\":{\"unknown\":{\"0\":{"))
+                    {
+                        exportLink[fitmentPos] = "fitment update";
+                        brandKeyPlusSKuFitmentUpdate.Add(exportLink[brandsSeriesPos] + "|" + exportLink[2]);
+                    }
+                }
+            }
+            
             //else
             //{
             //    if (fileReader.ID.ProdIDMMY != null)

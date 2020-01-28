@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Finish_Maker_Demo"
         mc:Ignorable="d"
-        Title="MainWindow" Height="520" Width="570">
+        Title="MainWindow" Height="540" Width="570">
     <Window.Resources>
         <Style x:Key="stdButton" TargetType="Button">
             <Setter Property="Width" Value="100"/>
@@ -42,7 +42,7 @@
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="310"/>
+            <RowDefinition Height="330"/>
             <RowDefinition x:Name="consoleGrid" Height="0.55*"/>
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0">
@@ -59,6 +59,10 @@
                     <StackPanel Orientation="Horizontal">
                         <CheckBox IsChecked="{Binding ValidateFiles}" Margin="0 0 5 0"/>
                         <TextBlock Text="Validate files"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding FitmentUpdateCheck}" Margin="0 0 5 0"/>
+                        <TextBlock Text="Fitment update only for spec SKU"/>
                     </StackPanel>
                 </StackPanel>
                 <TextBox Text="{Binding UserName}" Name="userName" Height="36" Width="250" FontSize="15" Foreground="Black" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"></TextBox>
@@ -138,7 +142,7 @@
             
             <StackPanel Style="{StaticResource stdStackPanel}">
                 <ProgressBar Width="420" HorizontalAlignment="Left" Height="40" Minimum="0" Maximum="100" Name="pbStatus" Value="{Binding Progress}"/>
-                <Button Command="{Binding Start}" Width="100" Content="Run" FontSize="16"/>
+                <Button Command="{Binding Start}" Width="100" Content="{Binding StartButton}" FontSize="16"/>
             </StackPanel>
         </StackPanel>
 

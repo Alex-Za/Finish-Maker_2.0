@@ -26,7 +26,7 @@ namespace Finish_Maker_Demo
         public ObservableCollection<ChildTitleDuplicates> ChtDuplicatesList { get; set; }
 
         string[] ghbrjk = { "Sidorchenko", "Sidorchuk", "Sidorkidze", "Sidorkisyan", "Van Der Sidorkin", "Sidorkopulos", "Sidorenko", "Sidorkov", "Sidorski", "Sidormen", "Sidorkinyo", "Sidorishkin", "Sidorkyauskas" };
-
+        Dispatcher _dispatcher;
         public FinishMakerViewModel()
         {
             ExpLinksList = new ObservableCollection<ExportLinks>();
@@ -35,7 +35,9 @@ namespace Finish_Maker_Demo
             ChtDuplicatesList = new ObservableCollection<ChildTitleDuplicates>();
             finishMaker.ProductDataCheck = true;
             finishMaker.ValidateFiles = true;
+            StartButton = "Run";
             UserName = "Evgeniy " + ghbrjk[new Random().Next(0, ghbrjk.Length)];
+            _dispatcher = Dispatcher.CurrentDispatcher;
 
             worker = new BackgroundWorker();
             worker.WorkerReportsProgress = true;
@@ -177,6 +179,24 @@ namespace Finish_Maker_Demo
                 OnPropertyChanged("ValidateFiles");
             }
         }
+        public bool FitmentUpdateCheck
+        {
+            get { return finishMaker.FitmentUpdate; }
+            set
+            {
+                finishMaker.FitmentUpdate = value;
+                OnPropertyChanged("FitmentUpdateCheck");
+            }
+        }
+        public string StartButton
+        {
+            get { return finishMaker.StartButton; }
+            set
+            {
+                finishMaker.StartButton = value;
+                OnPropertyChanged("StartButton");
+            }
+        }
         public RelayCommand Start
         {
             get
@@ -261,6 +281,21 @@ namespace Finish_Maker_Demo
 
         private void worker_DoWork(object sender, DoWorkEventArgs e)
         {
+            if (StartButton == "Clear")
+            {
+                changeProgress(0);
+                _dispatcher.BeginInvoke(new Action(() =>
+                {
+                    ExpLinksList.Clear();
+                    PDList.Clear();
+                    IDList.Clear();
+                    ChtDuplicatesList.Clear();
+                }));
+                StartButton = "Run";
+                ConsoleTextProperty = new ConsoleText { TheColor = Brushes.Black, TheText = "" };
+                return;
+            }
+
             OpenFileDialog fd = new OpenFileDialog();
             fd.ValidateNames = false;
             fd.CheckFileExists = false;
@@ -302,7 +337,7 @@ namespace Finish_Maker_Demo
                         }
                     }
 
-                    Processing processing = new Processing(fileReader, UserName);
+                    Processing processing = new Processing(fileReader, UserName, FitmentUpdateCheck);
                     Writer writer = new Writer(processing, changeProgress, saveFilePath);
 
                     writer.Write();
@@ -339,6 +374,8 @@ namespace Finish_Maker_Demo
                     ConsoleText workingTime = ConsoleTextProperty;
                     workingTime.TheText += Environment.NewLine + "Время работы программы: " + elapsedTime;
                     ConsoleTextProperty = workingTime;
+
+                    StartButton = "Clear";
                 }
                 catch (Exception ex)
                 {

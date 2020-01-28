@@ -13,7 +13,9 @@ namespace Finish_Maker_Demo
         public string UserName { get; set; }
         public int Progress { get; set; }
         public bool ValidateFiles { get; set; }
+        public bool FitmentUpdate { get; set; }
         public bool ExportLinkCheck { get; set; }
         public bool ProductDataCheck { get; set; }
+        public string StartButton { get; set; }
     }
 }
