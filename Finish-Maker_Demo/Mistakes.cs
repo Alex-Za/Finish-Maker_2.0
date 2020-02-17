@@ -186,7 +186,7 @@ namespace Finish_Maker_Demo
 
                 HashSet<string> allSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                for (int i = 1; i < exportLinks.Count - 1; i++)
+                for (int i = 1; i < exportLinks.Count; i++)
                 {
                     allSKU.Add(exportLinks[i][brandKayPosition]);
                 }
