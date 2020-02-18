@@ -80,18 +80,18 @@ namespace Finish_Maker_Demo
             AddUpdateType(pDataBrandKeyPosition);
             AddHeaderToMainData();
         }
-        private void GeneratingMainDataTabels(SortedSet<string> brandSeriesKey, int pDataBrandSeriesPosition, HashSet<string> allSKU, int pDataBrandKeyPosition, HashSet<string> idsPlusBrandSeries, HashSet<string> brandKeyPlusSKuFitmentUpdate, HashSet<string> skuPlusBrandsSeries, HashSet<string> problematicBrandSeriesPlusSKU)
+        private void AddBrandsInMainData(SortedSet<string> brandSeriesKey, string[,] mainData)
         {
-            mainData = new string[brandSeriesKey.Count + 2, 19];
             int positionForMainData = 2;
 
             foreach (string s in brandSeriesKey)
             {
                 mainData[positionForMainData, 1] = s;
                 positionForMainData++;
-
             }
-
+        }
+        private void AddNewSkuCountInMainData(int pDataBrandSeriesPosition, int pDataBrandKeyPosition, HashSet<string> allSKU, string[,] mainData)
+        {
             for (int i = 2; i < mainData.GetLength(0); i++)
             {
                 int newProductCount = 0;
@@ -104,7 +104,9 @@ namespace Finish_Maker_Demo
                 }
                 mainData[i, 3] = newProductCount.ToString();
             }
-
+        }
+        private void AddNewProdIDCountInMainData(HashSet<string> idsPlusBrandSeries, string[,] mainData)
+        {
             List<string[]> brandIDsForCheck = new List<string[]>();
 
             foreach (string s in idsPlusBrandSeries)
@@ -125,7 +127,9 @@ namespace Finish_Maker_Demo
                 }
                 mainData[i, 4] = newIDsCount.ToString();
             }
-
+        }
+        private void AddNewFitmUpdateCountInMainData(HashSet<string> brandKeyPlusSKuFitmentUpdate, string[,] mainData)
+        {
             List<string[]> fitmentUpdateForCheck = new List<string[]>();
             string[] fitmentUpdateLine;
 
@@ -147,7 +151,9 @@ namespace Finish_Maker_Demo
                 }
                 mainData[i, 5] = fitmentUpdateCount.ToString();
             }
-
+        }
+        private void AddTotalSkuCountInMainData(HashSet<string> skuPlusBrandsSeries, string[,] mainData)
+        {
             for (int i = 2; i < mainData.GetLength(0); i++)
             {
                 int totalSKuCount = 0;
@@ -161,7 +167,9 @@ namespace Finish_Maker_Demo
                 }
                 mainData[i, 11] = totalSKuCount.ToString();
             }
-
+        }
+        private void AddProblemSkuCountInMainData(HashSet<string> problematicBrandSeriesPlusSKU, string[,] mainData)
+        {
             for (int i = 2; i < mainData.GetLength(0); i++)
             {
                 int problematicCount = 0;
@@ -186,6 +194,22 @@ namespace Finish_Maker_Demo
                     mainData[i, 14] = "Task for Designers is still in progress";
                 }
             }
+        }
+        private void GeneratingMainDataTabels(SortedSet<string> brandSeriesKey, int pDataBrandSeriesPosition, HashSet<string> allSKU, int pDataBrandKeyPosition, HashSet<string> idsPlusBrandSeries, HashSet<string> brandKeyPlusSKuFitmentUpdate, HashSet<string> skuPlusBrandsSeries, HashSet<string> problematicBrandSeriesPlusSKU)
+        {
+            mainData = new string[brandSeriesKey.Count + 2, 19];
+
+            AddBrandsInMainData(brandSeriesKey, mainData);
+
+            AddNewSkuCountInMainData(pDataBrandSeriesPosition, pDataBrandKeyPosition, allSKU, mainData);
+
+            AddNewProdIDCountInMainData(idsPlusBrandSeries, mainData);
+
+            AddNewFitmUpdateCountInMainData(brandKeyPlusSKuFitmentUpdate, mainData);
+
+            AddTotalSkuCountInMainData(skuPlusBrandsSeries, mainData);
+
+            AddProblemSkuCountInMainData(problematicBrandSeriesPlusSKU, mainData);
         }
         private void AddProblematicInfo(List<string> exportLink, int problematicSKUPosition)
         {

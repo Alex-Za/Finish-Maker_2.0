@@ -246,7 +246,7 @@ namespace Finish_Maker_Demo
         {
             string[,] mainData = processing.MainData;
 
-            //создание хуйни
+            //форматирование
             int[,] numbersMainData1 = new int[mainData.GetLength(0) - 2, 7];
             int[,] numbersMainData2 = new int[mainData.GetLength(0) - 2, 2];
 

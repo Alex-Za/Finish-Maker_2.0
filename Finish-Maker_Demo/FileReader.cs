@@ -78,6 +78,120 @@ namespace Finish_Maker_Demo
                     yield return reader.ReadLine().Split('|');
         }
 
+        private void ForParseIDcsv(string filePath, ProductID productID)
+        {
+            using (StreamReader reader = new StreamReader(filePath))
+            {
+                var firstLine = reader.ReadLine().Split('|');
+                if (firstLine.Count() > 1)
+                {
+                    int idIndex = 0;
+                    int makeIndex = 0;
+                    int modelIndex = 0;
+                    int yearsIndex = 0;
+                    for (int i = 0; i < firstLine.Length; i++)
+                    {
+                        switch (firstLine[i])
+                        {
+                            case "Product ID":
+                                idIndex = i;
+                                break;
+                            case "Make":
+                                makeIndex = i;
+                                break;
+                            case "Model":
+                                modelIndex = i;
+                                break;
+                            case "Years":
+                                yearsIndex = i;
+                                break;
+                        }
+                    }
+
+                    while (!reader.EndOfStream)
+                    {
+                        if (productID.ProdIDMMY == null)
+                        {
+                            productID.ProdIDMMY = new HashSet<string>();
+                        }
+
+                        var line = reader.ReadLine().Split('|');
+                        productID.ProdID.Add(line[idIndex]);
+                        productID.ProdIDMMY.Add(line[idIndex] + '|' + line[makeIndex] + '|' + line[modelIndex] + '|' + line[yearsIndex]);
+                    }
+                }
+                else
+                {
+                    while (!reader.EndOfStream)
+                    {
+                        var line = reader.ReadLine();
+                        productID.ProdID.Add(line);
+                    }
+                }
+            }
+        }
+        private void ForParseIDxlsx(string filePath, ProductID productID)
+        {
+            using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
+            {
+                List<List<string>> dataSheet = new List<List<string>>();
+
+                WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
+                Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().ElementAt(0);
+                Worksheet worksheet = ((WorksheetPart)workbookPart.GetPartById(sheet.Id)).Worksheet;
+                SheetData sheetData = worksheet.Elements<SheetData>().First();
+
+                Row firstRow = sheetData.Elements<Row>().First();
+
+                List<string> dataList = new List<string>();
+
+                for (int i = 0; i < firstRow.Descendants<Cell>().Count(); i++)
+                {
+                    Cell cell = firstRow.Descendants<Cell>().ElementAt(i);
+                    int actualCellIndex = CellReferenceToIndex(cell);
+                    dataList.Add(GetCellValue(spreadsheetDocument, cell));
+                }
+
+                int idIndex = 0;
+                int makeIndex = 0;
+                int modelIndex = 0;
+                int yearsIndex = 0;
+                for (int i = 0; i < dataList.Count; i++)
+                {
+                    switch (dataList[i])
+                    {
+                        case "Product ID":
+                            idIndex = i;
+                            break;
+                        case "Make":
+                            makeIndex = i;
+                            break;
+                        case "Model":
+                            modelIndex = i;
+                            break;
+                        case "Years":
+                            yearsIndex = i;
+                            break;
+                    }
+                }
+
+                if (productID.ProdIDMMY == null)
+                {
+                    productID.ProdIDMMY = new HashSet<string>();
+                }
+
+                foreach (Row row in sheetData.Elements<Row>())
+                {
+                    Cell cell = row.Descendants<Cell>().ElementAt(idIndex - 1);
+                    Cell cell2 = row.Descendants<Cell>().ElementAt(makeIndex - 1);
+                    Cell cell3 = row.Descendants<Cell>().ElementAt(modelIndex - 1);
+                    Cell cell4 = row.Descendants<Cell>().ElementAt(yearsIndex - 1);
+
+                    productID.ProdID.Add(GetCellValue(spreadsheetDocument, cell));
+                    productID.ProdIDMMY.Add(GetCellValue(spreadsheetDocument, cell) + '|' + GetCellValue(spreadsheetDocument, cell2) + '|' + GetCellValue(spreadsheetDocument, cell3) + '|' + GetCellValue(spreadsheetDocument, cell4));
+                }
+            }
+        }
         private ProductID ParsIDs(List<string> path)
         {
 
@@ -89,117 +203,11 @@ namespace Finish_Maker_Demo
             {
                 if (Path.GetExtension(filePath) == ".csv")
                 {
-                    using (StreamReader reader = new StreamReader(filePath))
-                    {
-                        var firstLine = reader.ReadLine().Split('|');
-                        if (firstLine.Count() > 1)
-                        {
-                            int idIndex = 0;
-                            int makeIndex = 0;
-                            int modelIndex = 0;
-                            int yearsIndex = 0;
-                            for (int i = 0; i < firstLine.Length; i++)
-                            {
-                                switch (firstLine[i])
-                                {
-                                    case "Product ID":
-                                        idIndex = i;
-                                        break;
-                                    case "Make":
-                                        makeIndex = i;
-                                        break;
-                                    case "Model":
-                                        modelIndex = i;
-                                        break;
-                                    case "Years":
-                                        yearsIndex = i;
-                                        break;
-                                }
-                            }
-
-                            while (!reader.EndOfStream)
-                            {
-                                if (productID.ProdIDMMY == null)
-                                {
-                                    productID.ProdIDMMY = new HashSet<string>();
-                                }
-
-                                var line = reader.ReadLine().Split('|');
-                                productID.ProdID.Add(line[idIndex]);
-                                productID.ProdIDMMY.Add(line[idIndex] + '|' + line[makeIndex] + '|' + line[modelIndex] + '|' + line[yearsIndex]);
-                            }
-                        }
-                        else
-                        {
-                            while (!reader.EndOfStream)
-                            {
-                                var line = reader.ReadLine();
-                                productID.ProdID.Add(line);
-                            }
-                        }
-                    }
+                    ForParseIDcsv(filePath, productID);
                 }
                 else if (Path.GetExtension(filePath) == ".xlsx")
                 {
-                    using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
-                    {
-                        List<List<string>> dataSheet = new List<List<string>>();
-
-                        WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
-                        Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().ElementAt(0);
-                        Worksheet worksheet = ((WorksheetPart)workbookPart.GetPartById(sheet.Id)).Worksheet;
-                        SheetData sheetData = worksheet.Elements<SheetData>().First();
-
-                        Row firstRow = sheetData.Elements<Row>().First();
-
-                        List<string> dataList = new List<string>();
-
-                        for (int i = 0; i < firstRow.Descendants<Cell>().Count(); i++)
-                        {
-                            Cell cell = firstRow.Descendants<Cell>().ElementAt(i);
-                            int actualCellIndex = CellReferenceToIndex(cell);
-                            dataList.Add(GetCellValue(spreadsheetDocument, cell));
-                        }
-
-                        int idIndex = 0;
-                        int makeIndex = 0;
-                        int modelIndex = 0;
-                        int yearsIndex = 0;
-                        for (int i = 0; i < dataList.Count; i++)
-                        {
-                            switch (dataList[i])
-                            {
-                                case "Product ID":
-                                    idIndex = i;
-                                    break;
-                                case "Make":
-                                    makeIndex = i;
-                                    break;
-                                case "Model":
-                                    modelIndex = i;
-                                    break;
-                                case "Years":
-                                    yearsIndex = i;
-                                    break;
-                            }
-                        }
-
-                        if (productID.ProdIDMMY == null)
-                        {
-                            productID.ProdIDMMY = new HashSet<string>();
-                        }
-
-                        foreach (Row row in sheetData.Elements<Row>())
-                        {
-                            Cell cell = row.Descendants<Cell>().ElementAt(idIndex - 1);
-                            Cell cell2 = row.Descendants<Cell>().ElementAt(makeIndex - 1);
-                            Cell cell3 = row.Descendants<Cell>().ElementAt(modelIndex - 1);
-                            Cell cell4 = row.Descendants<Cell>().ElementAt(yearsIndex - 1);
-
-                            productID.ProdID.Add(GetCellValue(spreadsheetDocument, cell));
-                            productID.ProdIDMMY.Add(GetCellValue(spreadsheetDocument, cell) + '|' + GetCellValue(spreadsheetDocument, cell2) + '|' + GetCellValue(spreadsheetDocument, cell3) + '|' + GetCellValue(spreadsheetDocument, cell4));
-                        }
-                    }
+                    ForParseIDxlsx(filePath, productID);
                 }
             }
 
@@ -220,6 +228,95 @@ namespace Finish_Maker_Demo
             
         }
 
+        private void ForParseProductDataxlsx(string filePath, ProductData productData)
+        {
+            List<List<string>> dataSheet1 = new List<List<string>>();
+            List<List<string>> dataSheet2 = new List<List<string>>();
+
+            using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
+            {
+                if (productData.PDData1 != null)
+                {
+                    dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, true);
+                    AddKeyPDSheet1(dataSheet1);
+                    dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, true);
+                    AddKeyPDSheet2(dataSheet2);
+                }
+                else
+                {
+                    dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, false);
+                    AddKeyPDSheet1(dataSheet1);
+                    dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, false);
+                    AddKeyPDSheet2(dataSheet2);
+                }
+
+            }
+
+            if (productData.PDData1 != null)
+            {
+                productData.PDData1 = productData.PDData1.Concat(dataSheet1).ToList();
+                productData.PDData2 = productData.PDData2.Concat(dataSheet2).ToList();
+            }
+            else
+            {
+                productData.PDData1 = dataSheet1;
+                productData.PDData2 = dataSheet2;
+            }
+        }
+        private void ForParseProductDatacsv(string filePath, ProductData productData)
+        {
+            List<List<string>> dataSheet1 = new List<List<string>>();
+            List<List<string>> dataSheet2 = new List<List<string>>();
+            bool headerInitialize = false;
+            if (productData.PDData1 != null)
+            {
+                headerInitialize = true;
+            }
+
+            using (StreamReader reader = new StreamReader(filePath))
+            {
+                while (!reader.EndOfStream)
+                {
+                    if (headerInitialize)
+                    {
+                        reader.ReadLine();
+                        headerInitialize = false;
+                        continue;
+                    }
+                    var line = reader.ReadLine().Split('|');
+                    List<string> dataLine1 = new List<string>();
+                    List<string> dataLine2 = new List<string>();
+                    for (int i = 0; i < 11; i++)
+                    {
+                        dataLine1.Add(line[i]);
+                    }
+
+                    if (line[11] != "")
+                    {
+                        for (int i = 11; i < 16; i++)
+                        {
+                            dataLine2.Add(line[i]);
+                        }
+                        dataSheet2.Add(dataLine2);
+                    }
+                    dataSheet1.Add(dataLine1);
+                }
+            }
+
+            AddKeyPDSheet1(dataSheet1);
+            AddKeyPDSheet2(dataSheet2);
+
+            if (productData.PDData1 != null)
+            {
+                productData.PDData1 = productData.PDData1.Concat(dataSheet1).ToList();
+                productData.PDData2 = productData.PDData2.Concat(dataSheet2).ToList();
+            }
+            else
+            {
+                productData.PDData1 = dataSheet1;
+                productData.PDData2 = dataSheet2;
+            }
+        }
         private ProductData ParsProductData(List<string> path)
         {
             ProductData productData = new ProductData();
@@ -228,96 +325,12 @@ namespace Finish_Maker_Demo
             {
                 if (Path.GetExtension(filePath) == ".xlsx")
                 {
-                    List<List<string>> dataSheet1 = new List<List<string>>();
-                    List<List<string>> dataSheet2 = new List<List<string>>();
-
-                    using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
-                    {
-                        if (productData.PDData1 != null)
-                        {
-                            dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, true);
-                            AddKeyPDSheet1(dataSheet1);
-                            dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, true);
-                            AddKeyPDSheet2(dataSheet2);
-                        }
-                        else
-                        {
-                            dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, false);
-                            AddKeyPDSheet1(dataSheet1);
-                            dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, false);
-                            AddKeyPDSheet2(dataSheet2);
-                        }
-
-                    }
-
-                    if (productData.PDData1 != null)
-                    {
-                        productData.PDData1 = productData.PDData1.Concat(dataSheet1).ToList();
-                        productData.PDData2 = productData.PDData2.Concat(dataSheet2).ToList();
-                    }
-                    else
-                    {
-                        productData.PDData1 = dataSheet1;
-                        productData.PDData2 = dataSheet2;
-                    }
+                    ForParseProductDataxlsx(filePath, productData);
                 }
                 else if (Path.GetExtension(filePath) == ".csv")
                 {
-                    List<List<string>> dataSheet1 = new List<List<string>>();
-                    List<List<string>> dataSheet2 = new List<List<string>>();
-                    bool headerInitialize = false;
-                    if (productData.PDData1 != null)
-                    {
-                        headerInitialize = true;
-                    }
-
-                    using (StreamReader reader = new StreamReader(filePath))
-                    {
-                        while (!reader.EndOfStream)
-                        {
-                            if (headerInitialize)
-                            {
-                                reader.ReadLine();
-                                headerInitialize = false;
-                                continue;
-                            }
-                            var line = reader.ReadLine().Split('|');
-                            List<string> dataLine1 = new List<string>();
-                            List<string> dataLine2 = new List<string>();
-                            for (int i = 0; i < 11; i++)
-                            {
-                                dataLine1.Add(line[i]);
-                            }
-
-                            if (line[11]!="")
-                            {
-                                for (int i = 11; i < 16; i++)
-                                {
-                                    dataLine2.Add(line[i]);
-                                }
-                                dataSheet2.Add(dataLine2);
-                            }
-                            dataSheet1.Add(dataLine1);
-                        }
-                    }
-
-                    AddKeyPDSheet1(dataSheet1);
-                    AddKeyPDSheet2(dataSheet2);
-
-                    if (productData.PDData1 != null)
-                    {
-                        productData.PDData1 = productData.PDData1.Concat(dataSheet1).ToList();
-                        productData.PDData2 = productData.PDData2.Concat(dataSheet2).ToList();
-                    }
-                    else
-                    {
-                        productData.PDData1 = dataSheet1;
-                        productData.PDData2 = dataSheet2;
-                    }
-
+                    ForParseProductDatacsv(filePath, productData);
                 }
-
-                
             }
 
             return productData;
