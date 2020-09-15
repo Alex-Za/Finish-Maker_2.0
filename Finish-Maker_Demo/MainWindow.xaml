@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Finish_Maker_Demo"
         mc:Ignorable="d"
-        Title="MainWindow" Height="540" Width="570">
+        Title="FinishMaker" Height="540" Width="570">
     <Window.Resources>
         <Style x:Key="stdButton" TargetType="Button">
             <Setter Property="Width" Value="100"/>
@@ -104,7 +104,7 @@
                 </ListBox>
             </StackPanel>
             <StackPanel Style="{StaticResource stdStackPanel}" ToolTip="Select ID.csv file or old ExportLinks.csv/xlsx file">
-                <Button Command="{Binding AddIDCommand}" Style="{StaticResource stdButton}" Content="ID"/>
+                <Button Command="{Binding AddIDCommand}" Style="{StaticResource stdButton}" Content="ExportLinks/ID" FontSize="14"/>
                 <ListBox ItemsSource="{Binding IDList}" x:Name="IDListBox" Width="415" Margin="5 0 0 0" Height="40" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,16 +13,21 @@ namespace Finish_Maker_Demo
         public string userName;
         private bool fitmentUpdateCheck;
         private IEnumerable<List<string>> exportLinks;
-        public Processing(FileReader reader, string userName, bool fitmentUpdateCheck)
+        private ConsoleMessage message;
+        SortedSet<string> brandSeriesKey = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        public Processing(FileReader reader, string userName, bool fitmentUpdateCheck, ConsoleMessage message)
         {
             fileReader = reader;
             this.userName = userName;
             this.fitmentUpdateCheck = fitmentUpdateCheck;
+            this.message = message;
         }
 
         private void GenerateMainData()
         {
             exportLinks = fileReader.ExportLinks;
+            message.MessageTriger("Генерация мейн даты...");
+
             var isFirst = true;
 
             int problematicSKUPosition = 0;
@@ -33,7 +39,6 @@ namespace Finish_Maker_Demo
             int pDataBrandKeyPosition = fileReader.PData.PDData1[0].Count - 1;
             int pData2BrandKeyPosition = fileReader.PData.PDData2[0].Count - 1;
             SortedSet<string> brands = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-            SortedSet<string> brandSeriesKey = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> allSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> idsPlusBrandSeries = new HashSet<string>();
             HashSet<string> newSKU = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -46,6 +51,7 @@ namespace Finish_Maker_Demo
 
             foreach (var row in exportLinks)
             {
+
                 if (isFirst)
                 {
                     problematicSKUPosition = row.Count - 1;
@@ -463,6 +469,8 @@ namespace Finish_Maker_Demo
         }
         private void GenerateHeader()
         {
+            message.MessageTriger("Генерация шапки...");
+
             header = new string[7, 11];
             DateTime dateTime = DateTime.UtcNow.Date;
             string currentMonth = dateTime.ToString("MM");
@@ -485,8 +493,8 @@ namespace Finish_Maker_Demo
             header[6, 0] = "Scheduled Time:";
             header[1, 2] = CategoryValue[0];
             header[2, 2] = userName;
-            header[3, 2] = currentMonth + ".01." + currentYear;
-            header[4, 2] = dateTime.ToString("MM/dd/yyyy");
+            header[3, 2] = "'" + currentMonth + ".01." + currentYear;
+            header[4, 2] = "'" + dateTime.ToString("MM.dd.yyyy");
             header[5, 2] = "2 days";
             header[6, 2] = "2 days";
             header[1, 7] = "PRODUCT CATEGORY:";
@@ -494,6 +502,8 @@ namespace Finish_Maker_Demo
         }
         private void GenerateJobberApp(SortedSet<string> brands)
         {
+            message.MessageTriger("Генерация джобер/апп...");
+
             jobberApp = new string[brands.Count + 1, 19];
 
             jobberApp[0, 0] = "Brand / Input Data";
@@ -545,7 +555,7 @@ namespace Finish_Maker_Demo
 
                         if (fileReader.PData.PDData1[i][8] != "")
                         {
-                            if (Int32.TryParse(fileReader.PData.PDData1[i][7], out number))
+                            if (Int32.TryParse(fileReader.PData.PDData1[i][8], out number))
                             {
                                 newPDfCount += number;
                             }
@@ -557,7 +567,7 @@ namespace Finish_Maker_Demo
 
                         if (fileReader.PData.PDData1[i][9] != "")
                         {
-                            if (Int32.TryParse(fileReader.PData.PDData1[i][7], out number))
+                            if (Int32.TryParse(fileReader.PData.PDData1[i][9], out number))
                             {
                                 newVideoCount += number;
                             }
@@ -711,18 +721,69 @@ namespace Finish_Maker_Demo
         private void GenerateChildTitleDupList()
         {
             if (fileReader.ChtTitleDuplicates == null)
-            {
                 return;
+
+            List<List<string>> chtData = new List<List<string>>();
+            List<string> statBrands = new List<string>();
+            List<string> statData = new List<string>();
+            foreach (var row in fileReader.ChtTitleDuplicates)
+            {
+                if (brandSeriesKey.Contains(row[1].Remove(row[1].Length - 1)))
+                {
+                    List<string> list = new List<string>();
+                    for (int i = 0; i < row.Count-3; i++)
+                        list.Add(row[i]);
+
+                    chtData.Add(list);
+                }
+                if (row[7]!="" && brandSeriesKey.Contains(row[7].Remove(row[7].Length - 1)))
+                {
+                    statBrands.Add(row[7]);
+                    statData.Add(row[8]);
+                }
             }
 
-            chtTitleDuplicates = new string[fileReader.ChtTitleDuplicates.Count, fileReader.ChtTitleDuplicates[0].Count];
-
-            for (int i = 0; i < chtTitleDuplicates.GetLength(0); i++)
+            foreach (var brand in brandSeriesKey)
             {
-                for (int x = 0; x < chtTitleDuplicates.GetLength(1); x++)
+                if (!statBrands.Contains(brand+ "®"))
                 {
-                    chtTitleDuplicates[i, x] = fileReader.ChtTitleDuplicates[i][x];
+                    string totalSkuCount = "0";
+                    for (int i = 2; i < mainData.GetLength(0); i++)
+                    {
+                        if (mainData[i, 1].ToLower() == brand.ToLower())
+                        {
+                            totalSkuCount = mainData[i, 11];
+                            break;
+                        }
+                    }
+                    
+                    string brandName = brand + "®";
+                    statBrands.Add(brandName);
+                    statData.Add(totalSkuCount + " / 0, 0.00%");
                 }
+            }
+
+            chtTitleDuplicates = new string[chtData.Count+1, chtData[0].Count + 3 + 1];
+            chtTitleDuplicates[0, 0] = "Product Name";
+            chtTitleDuplicates[0, 1] = "Brand";
+            chtTitleDuplicates[0, 2] = "Make";
+            chtTitleDuplicates[0, 3] = "Model";
+            chtTitleDuplicates[0, 4] = "Years";
+            chtTitleDuplicates[0, 5] = "Parent IDs with Child title Duplication";
+            chtTitleDuplicates[0, 6] = "";
+            chtTitleDuplicates[0, 7] = "Brands";
+            chtTitleDuplicates[0, 8] = "Statistic (all Parents per Brand / parents with child title duplication, %)";
+
+            for (int i = 1; i < chtTitleDuplicates.GetLength(0); i++)
+            {
+                for (int x = 0; x < chtData[0].Count; x++)
+                    chtTitleDuplicates[i, x] = chtData[i-1][x];
+            }
+
+            for (int x = 1; x < statBrands.Count + 1; x++)
+            {
+                chtTitleDuplicates[x, 7] = statBrands[x-1];
+                chtTitleDuplicates[x, 8] = statData[x-1];
             }
         }
         private string[] GetCategoryValue()

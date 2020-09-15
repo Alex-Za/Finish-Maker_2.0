@@ -7,6 +7,8 @@ using System.IO;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using System.Data;
+using ExcelDataReader;
 
 namespace Finish_Maker_Demo
 {
@@ -14,14 +16,17 @@ namespace Finish_Maker_Demo
     {
         private List<List<string>> pathes;
         private bool skuFromPDCheck;
-        public FileReader(List<List<string>> pathes, bool skuFromPDCheck)
+        ConsoleMessage message;
+        public FileReader(List<List<string>> pathes, bool skuFromPDCheck, ConsoleMessage message)
         {
             this.pathes = pathes;
             this.skuFromPDCheck = skuFromPDCheck;
+            this.message = message;
         }
 
         private IEnumerable<List<string>> ParsExportLinks(List<string> path)
         {
+            message.MessageTriger("Чтение експорт линков из цсв файла...");
             NeededColumnNameInfo neededColumnNameInfo = null;
             var headerInitialize = false;
 
@@ -70,14 +75,84 @@ namespace Finish_Maker_Demo
             }
 
         }
-        
         private IEnumerable<string[]> GetLineFromFile(string path)
         {
             using (StreamReader reader = new StreamReader(path))
                 while (!reader.EndOfStream)
                     yield return reader.ReadLine().Split('|');
         }
+        private IEnumerable<List<string>> ParsExportLinksWithDataReader(List<string> path)
+        {
+            message.MessageTriger("Чтение експорт линков из xlsx файла...");
+            NeededColumnNameInfo neededColumnNameInfo = null;
+            var headerInitialize = false;
 
+            HashSet<string> allSKUInPD = GetSKUFromPD();
+
+            foreach (string filePath in path)
+            {
+                var dataFromFile = GetRowSheetData(filePath);
+
+                foreach (var lineRow in dataFromFile)
+                {
+                    string[] line = new string[lineRow.ItemArray.Length];
+                    for (int i = 0; i < lineRow.ItemArray.Length; i++)
+                    {
+                        if(!lineRow.IsNull(i))
+                        {
+                            line[i] = lineRow.ItemArray[i].ToString();
+                        } else
+                        {
+                            line[i] = "";
+                        }
+                    }
+
+                    if (!headerInitialize)
+                    {
+                        neededColumnNameInfo = GetNeededColumnNamesInfo(line);
+                        headerInitialize = true;
+                        var headers = neededColumnNameInfo.HeaderNames;
+                        headers.Add("Brand+SKU");
+                        yield return headers;
+                        continue;
+                    }
+
+                    if (line[2] == "")
+                        continue;
+
+                    var dataLine = new List<string>();
+
+                    for (int i = 0; i < neededColumnNameInfo.ColumnNumbers.Count; i++)
+                    {
+                        for (int x = 0; x < line.Length; x++)
+                        {
+
+                            if (neededColumnNameInfo.ColumnNumbers[i] == x)
+                            {
+                                dataLine.Add(line[x]);
+                                break;
+                            }
+                        }
+                    }
+
+                    GetExportLinksInfo(dataLine);
+                    if (skuFromPDCheck && !allSKUInPD.Contains(dataLine[dataLine.Count - 1]))
+                        continue;
+
+                    yield return dataLine;
+                }
+            }
+        }
+        private IEnumerable<DataRow> GetRowSheetData(string path)
+        {
+            using (FileStream stream = File.Open(path, FileMode.Open, FileAccess.Read))
+            {
+                using (IExcelDataReader reader = ExcelReaderFactory.CreateOpenXmlReader(stream))
+                {
+                    return reader.AsDataSet().Tables[0].AsEnumerable();
+                }
+            }
+        }
         private void ForParseIDcsv(string filePath, ProductID productID)
         {
             using (StreamReader reader = new StreamReader(filePath))
@@ -132,68 +207,30 @@ namespace Finish_Maker_Demo
         }
         private void ForParseIDxlsx(string filePath, ProductID productID)
         {
-            using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
+            var dataFromFile = GetRowSheetData(filePath);
+
+            if (dataFromFile.Count() > 1)
             {
-                List<List<string>> dataSheet = new List<List<string>>();
-
-                WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
-                Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().ElementAt(0);
-                Worksheet worksheet = ((WorksheetPart)workbookPart.GetPartById(sheet.Id)).Worksheet;
-                SheetData sheetData = worksheet.Elements<SheetData>().First();
-
-                Row firstRow = sheetData.Elements<Row>().First();
-
-                List<string> dataList = new List<string>();
-
-                for (int i = 0; i < firstRow.Descendants<Cell>().Count(); i++)
-                {
-                    Cell cell = firstRow.Descendants<Cell>().ElementAt(i);
-                    int actualCellIndex = CellReferenceToIndex(cell);
-                    dataList.Add(GetCellValue(spreadsheetDocument, cell));
-                }
-
                 int idIndex = 0;
-                int makeIndex = 0;
-                int modelIndex = 0;
-                int yearsIndex = 0;
-                for (int i = 0; i < dataList.Count; i++)
+                for (int i = 0; i < dataFromFile.First().ItemArray.Length; i++)
                 {
-                    switch (dataList[i])
-                    {
-                        case "Product ID":
-                            idIndex = i;
-                            break;
-                        case "Make":
-                            makeIndex = i;
-                            break;
-                        case "Model":
-                            modelIndex = i;
-                            break;
-                        case "Years":
-                            yearsIndex = i;
-                            break;
-                    }
+                    if(dataFromFile.First().ItemArray[i].ToString() == "Product ID")
+                        idIndex = i;
                 }
 
-                if (productID.ProdIDMMY == null)
-                {
-                    productID.ProdIDMMY = new HashSet<string>();
-                }
+                foreach (var row in dataFromFile)
+                    productID.ProdID.Add(row[idIndex].ToString());
 
-                foreach (Row row in sheetData.Elements<Row>())
-                {
-                    Cell cell = row.Descendants<Cell>().ElementAt(idIndex - 1);
-                    Cell cell2 = row.Descendants<Cell>().ElementAt(makeIndex - 1);
-                    Cell cell3 = row.Descendants<Cell>().ElementAt(modelIndex - 1);
-                    Cell cell4 = row.Descendants<Cell>().ElementAt(yearsIndex - 1);
+            } else
+            {
+                foreach (var row in dataFromFile)
+                    productID.ProdID.Add(row[0].ToString());
 
-                    productID.ProdID.Add(GetCellValue(spreadsheetDocument, cell));
-                    productID.ProdIDMMY.Add(GetCellValue(spreadsheetDocument, cell) + '|' + GetCellValue(spreadsheetDocument, cell2) + '|' + GetCellValue(spreadsheetDocument, cell3) + '|' + GetCellValue(spreadsheetDocument, cell4));
-                }
             }
         }
         private ProductID ParsIDs(List<string> path)
         {
+            message.MessageTriger("Чтение старых продукт айди...");
 
             ProductID productID = new ProductID();
             productID.ProdIDMMY = null;
@@ -216,6 +253,8 @@ namespace Finish_Maker_Demo
 
         private IEnumerable<List<string>> ParsChildTitleDuplicates(List<string> path)
         {
+            message.MessageTriger("Чтение файла чаил тайтл дубликатов...");
+
             foreach (string filePath in path)
             {
                 var dataFromFile = GetLineFromFile(filePath);
@@ -227,9 +266,38 @@ namespace Finish_Maker_Demo
             }
             
         }
+        private IEnumerable<List<string>> ParsChildTitleDuplicatesXlsx(List<string> path)
+        {
+            message.MessageTriger("Чтение файла чаил тайтл дубликатов...");
+
+            foreach (string filePath in path)
+            {
+                var dataFromFile = GetRowSheetData(filePath);
+
+                foreach (var lineRow in dataFromFile)
+                {
+                    string[] line = new string[lineRow.ItemArray.Length];
+                    for (int i = 0; i < lineRow.ItemArray.Length; i++)
+                    {
+                        if (!lineRow.IsNull(i))
+                        {
+                            line[i] = lineRow.ItemArray[i].ToString();
+                        }
+                        else
+                        {
+                            line[i] = "";
+                        }
+                    }
+                    yield return line.ToList();
+                }
+            }
+
+        }
 
         private void ForParseProductDataxlsx(string filePath, ProductData productData)
         {
+            message.MessageTriger("Чтение файла продукт даты...");
+
             List<List<string>> dataSheet1 = new List<List<string>>();
             List<List<string>> dataSheet2 = new List<List<string>>();
 
@@ -343,7 +411,13 @@ namespace Finish_Maker_Demo
             {
                 if (exportLinks == null)
                 {
-                    exportLinks = ParsExportLinks(pathes[0]);
+                    if(Path.GetExtension(pathes[0][0]) == ".xlsx")
+                    {
+                        exportLinks = ParsExportLinksWithDataReader(pathes[0]);
+                    } else
+                    {
+                        exportLinks = ParsExportLinks(pathes[0]);
+                    }
                 }
                 return exportLinks;
             }
@@ -376,7 +450,15 @@ namespace Finish_Maker_Demo
                     }
                     else
                     {
-                        chtTitleDuplicates = ParsChildTitleDuplicates(pathes[3]).ToList();
+                        if (Path.GetExtension(pathes[3][0]) == ".xlsx")
+                        {
+                            chtTitleDuplicates = ParsChildTitleDuplicatesXlsx(pathes[3]).ToList();
+                        }
+                        else
+                        {
+                            chtTitleDuplicates = ParsChildTitleDuplicates(pathes[3]).ToList();
+                        }
+                        
                     }
                 }
                 return chtTitleDuplicates;

@@ -65,9 +65,9 @@ namespace Finish_Maker_Demo
             {
                 foreach (string s in pathes[i])
                 {
-                    if (Path.GetExtension(s) != ".csv")
+                    if (Path.GetExtension(s) != ".csv" && Path.GetExtension(s) != ".xlsx")
                     {
-                        criticalErrors += "Файл ексопрт линков имеет некорректное расширение, измените путь на формат .csv" + Environment.NewLine;
+                        criticalErrors += "Файл ексопрт линков имеет некорректное расширение, измените путь на формат .csv или .xlsx" + Environment.NewLine;
                         return;
                     }
                 }

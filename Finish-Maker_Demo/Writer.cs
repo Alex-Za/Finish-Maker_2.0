@@ -9,17 +9,22 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using System.Drawing;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.IO;
+using ClosedXML.Excel;
 
 namespace Finish_Maker_Demo
 {
     class Writer
     {
         private Processing processing;
-        public Writer(Processing process, Action<int> ChangeProgress, string saveFilePath)
+        ConsoleMessage message;
+        FileReader fileReader;
+        public Writer(Processing process, Action<int> ChangeProgress, string saveFilePath, ConsoleMessage message, FileReader fileReader)
         {
             processing = process;
             this.changeProgress = ChangeProgress;
             this.saveFilePath = saveFilePath;
+            this.message = message;
+            this.fileReader = fileReader;
         }
 
         Action<int> changeProgress;
@@ -165,6 +170,8 @@ namespace Finish_Maker_Demo
 
         private void HeaderWrite(Excel.Worksheet worksheet, int lastFilledRow)
         {
+            message.MessageTriger("Создание шапки финиш файла...");
+
             worksheet.Name = "General";
             string[,] header = processing.Header;
             Excel.Range startCell = (Excel.Range)worksheet.Cells[2, 2];
@@ -208,6 +215,8 @@ namespace Finish_Maker_Demo
 
         private void JobberAppWrite(Excel.Worksheet worksheet, int lastFilledRow)
         {
+            message.MessageTriger("Заполнение джобер/апликейшен...");
+
             string[,] joberApp = processing.JobberApp;
             Excel.Range startCell = (Excel.Range)worksheet.Cells[lastFilledRow + 1, 2];
             Excel.Range endCell = (Excel.Range)worksheet.Cells[lastFilledRow + joberApp.GetLength(0), 20];
@@ -244,6 +253,8 @@ namespace Finish_Maker_Demo
 
         private void MainWrite(Excel.Worksheet worksheet, int lastFilledRow)
         {
+            message.MessageTriger("Заполнение мейн даты в финиш файл...");
+
             string[,] mainData = processing.MainData;
 
             //форматирование
@@ -386,6 +397,8 @@ namespace Finish_Maker_Demo
 
         private void WriteNewSKUList(Excel.Worksheet worksheet)
         {
+            message.MessageTriger("Добавление листа с новыми ску...");
+
             worksheet.Name = "Added_SKUs";
 
             Excel.Range startCell = (Excel.Range)worksheet.Cells[1, 1];
@@ -426,6 +439,8 @@ namespace Finish_Maker_Demo
 
         private void WriteFitmUpdateList(Excel.Worksheet worksheet)
         {
+            message.MessageTriger("Добавление листа с фитмент апдейт...");
+
             worksheet.Name = "Fitment Updates";
 
             Excel.Range startCell = (Excel.Range)worksheet.Cells[1, 1];
@@ -451,6 +466,8 @@ namespace Finish_Maker_Demo
 
         private void WriteProblematicList(Excel.Worksheet worksheet)
         {
+            message.MessageTriger("Добавление листа с проблематик ску...");
+
             worksheet.Name = "Problematic SKU's (reason)";
 
             Excel.Range startCell = (Excel.Range)worksheet.Cells[1, 1];
@@ -476,6 +493,8 @@ namespace Finish_Maker_Demo
 
         private void WriteChildDupList(Excel.Worksheet worksheet)
         {
+            message.MessageTriger("Добавление листа с чаилд тайт дубликатами...");
+
             worksheet.Name = "Child titles duplication";
 
             if (processing.ChildTitleDuplicates == null)
@@ -571,106 +590,29 @@ namespace Finish_Maker_Demo
                 sheetData.AppendChild(newRow2);
 
             }
-
-
-            //Excel.Application app = new Excel.Application();
-            //Excel.Workbook workbook;
-            //Excel.Worksheet worksheet;
-            //Excel.Sheets sheet;
-            //app.Visible = false;
-            //app.DisplayAlerts = false;
-            //workbook = app.Workbooks.Add(Type.Missing);
-            //sheet = workbook.Sheets;
-
-            //worksheet = workbook.Worksheets[1];
-
-            //worksheet.Cells[1, 1].Value = "Brands Count";
-            //worksheet.Cells[1, 2].Value = "Brands";
-
-            //int brandsCount = processing.MainData.GetLength(0) - 2;
-
-            //string brands = "";
-
-            //for (int i = 2; i < processing.MainData.GetLength(0); i++)
-            //{
-            //    if (i == brandsCount + 1)
-            //    {
-            //        brands += processing.MainData[i, 1];
-            //        break;
-            //    }
-            //    brands += processing.MainData[i, 1] + ", ";
-            //}
-
-            //worksheet.Cells[2, 1].Value = brandsCount;
-            //worksheet.Cells[2, 2].Value = brands;
-
-            //string pathDir = Directory.GetCurrentDirectory();
-            //string currentPath = pathDir + "\\" + "Brands.xlsx";
-            //int nextPath = 1;
-
-            //while (File.Exists(currentPath))
-            //{
-            //    currentPath = pathDir + "\\" + "Brands(" + nextPath + ").xlsx";
-            //    nextPath++;
-            //}
-
-            //workbook.SaveAs(currentPath);
-            //workbook.Close();
-            //app.Quit();
         }
 
-        public void WriteExcelFile(string filePath, HashSet<string> data)
+        public void WriteExcelFile()
         {
-            using (SpreadsheetDocument document = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
+            using (var workbook = new XLWorkbook())
             {
-                WorkbookPart workbookPart = document.AddWorkbookPart();
-                workbookPart.Workbook = new Workbook();
-                workbookPart.Workbook.Sheets = new Sheets();
+                var worksheet = workbook.Worksheets.Add("Sheet1");
+                int counter = 1;
 
-                WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-                SheetData sheetData = new SheetData();
-                worksheetPart.Worksheet = new Worksheet(sheetData);
-
-                Sheets sheets = document.WorkbookPart.Workbook.GetFirstChild<Sheets>();
-
-                uint sheetId = 1;
-                if (sheets.Elements<Sheet>().Count() > 0)
+                foreach (var row in fileReader.ExportLinks)
                 {
-                    sheetId = sheets.Elements<Sheet>().Select(s => s.SheetId.Value).Max() + 1;
+                    int counter2 = 1;
+                    foreach (var cell in row)
+                    {
+                        //worksheet.Cell(counter, counter2).InsertData(row[counter2-1]);
+                        worksheet.Cell(counter, counter2).Value = row[counter2 - 1];
+                        counter2++;
+                    }
+                    counter2 = 0;
+                    counter++;
                 }
 
-                Sheet sheet = new Sheet()
-                {
-                    Id = workbookPart.GetIdOfPart(worksheetPart),
-                    SheetId = sheetId,
-                    Name = "mySheet"
-                };
-                sheets.Append(sheet);
-
-
-                foreach (string s in data)
-                {
-                    Row newRow = new Row();
-                    Cell cell = new Cell();
-                    cell.DataType = CellValues.String;
-                    cell.CellValue = new CellValue(s);
-                    newRow.AppendChild(cell);
-                    sheetData.AppendChild(newRow);
-                }
-
-                //foreach (List<string> dataList in data)
-                //{
-                //    Row newRow = new Row();
-                //    foreach (string s in dataList)
-                //    {
-                //        Cell cell = new Cell();
-                //        cell.DataType = CellValues.String;
-                //        cell.CellValue = new CellValue(s);
-                //        newRow.AppendChild(cell);
-                //    }
-                //    sheetData.AppendChild(newRow);
-                //}
-
+                workbook.SaveAs("InsertingData.xlsx");
             }
 
         }

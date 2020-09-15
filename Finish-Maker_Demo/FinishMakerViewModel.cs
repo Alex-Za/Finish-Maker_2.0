@@ -306,6 +306,8 @@ namespace Finish_Maker_Demo
             {
                 try
                 {
+                    ConsoleMessage message = new ConsoleMessage();
+                    message.MessageNotification += MessageTriger;
                     string saveFilePath = Path.GetDirectoryName(fd.FileName);
 
                     Stopwatch stopWatch = new Stopwatch();
@@ -315,7 +317,7 @@ namespace Finish_Maker_Demo
 
                     List<List<string>> filePath = GetAllPathes(ExpLinksList, PDList, IDList, ChtDuplicatesList);
 
-                    FileReader fileReader = new FileReader(filePath, IsSelectedPDCheck);
+                    FileReader fileReader = new FileReader(filePath, IsSelectedPDCheck, message);
 
                     changeProgress(10);
                     Mistakes mistakesCheck = new Mistakes(fileReader, filePath, IsSelectedPDCheck);
@@ -329,26 +331,20 @@ namespace Finish_Maker_Demo
                             changeProgress(0);
                             return;
                         }
-
-                        if (mistakesCheck.OtherErrors != null)
-                        {
-                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.OtherErrors };
-                            ConsoleTextProperty = someConsoleText;
-                        }
                     }
 
-                    Processing processing = new Processing(fileReader, UserName, FitmentUpdateCheck);
-                    Writer writer = new Writer(processing, changeProgress, saveFilePath);
+                    Processing processing = new Processing(fileReader, UserName, FitmentUpdateCheck, message);
+                    Writer writer = new Writer(processing, changeProgress, saveFilePath, message, fileReader);
+
+                    //writer.WriteExcelFile();
 
                     writer.Write();
-
-                    //writer.WriteExcelFile("C:\\Programming\\C#\\Test.xlsx", fileReader.ID.ProdIDMMY);
 
                     if (ValidateFiles == true)
                     {
                         if (mistakesCheck.OtherErrors != null)
                         {
-                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = ConsoleTextProperty.TheText };
+                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.OtherErrors };
                             someConsoleText.TheText += "Done";
                             ConsoleTextProperty = someConsoleText;
                         }
@@ -381,9 +377,9 @@ namespace Finish_Maker_Demo
                 {
                     ConsoleTextProperty = new ConsoleText { TheText = "Произошла ошибка: " + ex, TheColor = Brushes.Red };
                 }
-                
+
             }
-            
+
         }
 
         void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
@@ -405,7 +401,10 @@ namespace Finish_Maker_Demo
             return result;
         }
 
-
+        private void MessageTriger(string message)
+        {
+            ConsoleTextProperty = new ConsoleText { TheColor = Brushes.Black, TheText = message };
+        }
         public event PropertyChangedEventHandler PropertyChanged;
         public void OnPropertyChanged([CallerMemberName]string prop = "")
         {
