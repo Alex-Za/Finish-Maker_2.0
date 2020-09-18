@@ -117,7 +117,7 @@ namespace Finish_Maker_Demo
             string currentDate = dateTime.ToString("MM-dd-yy");
             string pathDir = saveFilePath;
 
-            string categoryVal = CheckForSlash(processing.CategoryValue[0]);
+            string categoryVal = CheckForSlash(processing.CategoryValue[2]);
             string userNameVal = CheckForSlash(processing.userName);
             string currentFileName = pathDir + "\\" + categoryVal + "_" + userNameVal + "_Updated-" + currentDate;
             int availableFileNumber = 1;

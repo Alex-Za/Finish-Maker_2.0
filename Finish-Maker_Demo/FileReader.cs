@@ -592,6 +592,8 @@ namespace Finish_Maker_Demo
                 {
                     Cell cell = row.Descendants<Cell>().ElementAt(i);
                     int actualCellIndex = CellReferenceToIndex(cell);
+                    if (actualCellIndex >= headerColumnCount)
+                        continue;
                     dataList[actualCellIndex] = GetCellValue(spreadsheetDocument, cell);
                 }
 

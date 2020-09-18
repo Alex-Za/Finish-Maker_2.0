@@ -624,7 +624,7 @@ namespace Finish_Maker_Demo
                 string[] uniqueSubtypes = subtypesList.Distinct().ToArray();
                 string resultSubtypes = String.Join("; ", uniqueSubtypes);
 
-                for (int y = 3; y < 8; y++)
+                for (int y = 3; y < 10; y++)
                 {
                     int number;
                     if (Int32.TryParse(mainData[x, y], out number))
@@ -680,7 +680,7 @@ namespace Finish_Maker_Demo
                     }
                 }
 
-                for (int y = 3; y < 8; y++)
+                for (int y = 3; y < 10; y++)
                 {
                     int number;
                     if (Int32.TryParse(mainData[i, y], out number))
@@ -728,7 +728,7 @@ namespace Finish_Maker_Demo
             List<string> statData = new List<string>();
             foreach (var row in fileReader.ChtTitleDuplicates)
             {
-                if (brandSeriesKey.Contains(row[1].Remove(row[1].Length - 1)))
+                if (row[1]!="" && brandSeriesKey.Contains(row[1].Remove(row[1].Length - 1)))
                 {
                     List<string> list = new List<string>();
                     for (int i = 0; i < row.Count-3; i++)
@@ -738,32 +738,38 @@ namespace Finish_Maker_Demo
                 }
                 if (row[7]!="" && brandSeriesKey.Contains(row[7].Remove(row[7].Length - 1)))
                 {
-                    statBrands.Add(row[7]);
+                    statBrands.Add(row[7].Remove(row[7].Length - 1));
                     statData.Add(row[8]);
                 }
             }
 
             foreach (var brand in brandSeriesKey)
             {
-                if (!statBrands.Contains(brand+ "®"))
+                if (!statBrands.Contains(brand))
                 {
-                    string totalSkuCount = "0";
-                    for (int i = 2; i < mainData.GetLength(0); i++)
-                    {
-                        if (mainData[i, 1].ToLower() == brand.ToLower())
-                        {
-                            totalSkuCount = mainData[i, 11];
-                            break;
-                        }
-                    }
+                    //string totalSkuCount = "0";
+                    //for (int i = 2; i < mainData.GetLength(0); i++)
+                    //{
+                    //    if (mainData[i, 1].ToLower() == brand.ToLower())
+                    //    {
+                    //        totalSkuCount = mainData[i, 11];
+                    //        break;
+                    //    }
+                    //}
                     
-                    string brandName = brand + "®";
+                    string brandName = brand;
                     statBrands.Add(brandName);
-                    statData.Add(totalSkuCount + " / 0, 0.00%");
+                    statData.Add("0 / 0, 0.00%");
                 }
             }
+            if (chtData.Count < statBrands.Count)
+            {
+                chtTitleDuplicates = new string[statBrands.Count + 1, 9];
+            } else
+            {
+                chtTitleDuplicates = new string[chtData.Count + 1, 9];
+            }
 
-            chtTitleDuplicates = new string[chtData.Count+1, chtData[0].Count + 3 + 1];
             chtTitleDuplicates[0, 0] = "Product Name";
             chtTitleDuplicates[0, 1] = "Brand";
             chtTitleDuplicates[0, 2] = "Make";
@@ -774,32 +780,45 @@ namespace Finish_Maker_Demo
             chtTitleDuplicates[0, 7] = "Brands";
             chtTitleDuplicates[0, 8] = "Statistic (all Parents per Brand / parents with child title duplication, %)";
 
-            for (int i = 1; i < chtTitleDuplicates.GetLength(0); i++)
+            if (chtData.Count > 0)
             {
-                for (int x = 0; x < chtData[0].Count; x++)
-                    chtTitleDuplicates[i, x] = chtData[i-1][x];
+                for (int i = 1; i < chtData.Count; i++)
+                {
+                    for (int x = 0; x < chtData[0].Count; x++)
+                        chtTitleDuplicates[i, x] = chtData[i - 1][x];
+                }
             }
 
             for (int x = 1; x < statBrands.Count + 1; x++)
             {
-                chtTitleDuplicates[x, 7] = statBrands[x-1];
+                if (statBrands[x - 1] == "Torxe")
+                {
+                    chtTitleDuplicates[x, 7] = statBrands[x - 1] + "™";
+                } else
+                {
+                    chtTitleDuplicates[x, 7] = statBrands[x - 1] + "®";
+                }
                 chtTitleDuplicates[x, 8] = statData[x-1];
             }
         }
         private string[] GetCategoryValue()
         {
             string[] subtypes = new string[fileReader.PData.PDData1.Count - 1];
+            string[] categoryNames = new string[fileReader.PData.PDData1.Count - 1];
 
             for (int i = 0; i < subtypes.Length; i++)
             {
                 subtypes[i] = fileReader.PData.PDData1[i + 1][6];
+                categoryNames[i] = fileReader.PData.PDData1[i + 1][5];
             }
 
-            string[] categoryValue = new string[2];
+            string[] categoryValue = new string[3];
+            string[] uniqueCategoryNames = categoryNames.Distinct().ToArray();
             string[] uniqueSubtypes = subtypes.Distinct().ToArray();
 
-            categoryValue[0] = fileReader.PData.PDData1[1][5];
+            categoryValue[0] = string.Join("; ", uniqueCategoryNames);
             categoryValue[1] = string.Join("; ", uniqueSubtypes);
+            categoryValue[2] = fileReader.PData.PDData1[2][5];
 
             return categoryValue;
         }
