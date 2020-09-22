@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.Diagnostics;
 using Microsoft.Win32;
+using System.Configuration;
 
 namespace Finish_Maker_Demo
 {
@@ -20,15 +21,18 @@ namespace Finish_Maker_Demo
     {
 
         FinishMakerModel finishMaker = new FinishMakerModel();
+        Configuration config;
         public ObservableCollection<ExportLinks> ExpLinksList { get; set; }
         public ObservableCollection<PD> PDList { get; set; }
         public ObservableCollection<ID> IDList { get; set; }
         public ObservableCollection<ChildTitleDuplicates> ChtDuplicatesList { get; set; }
 
-        string[] ghbrjk = { "Sidorchenko", "Sidorchuk", "Sidorkidze", "Sidorkisyan", "Van Der Sidorkin", "Sidorkopulos", "Sidorenko", "Sidorkov", "Sidorski", "Sidormen", "Sidorkinyo", "Sidorishkin", "Sidorkyauskas" };
-        Dispatcher _dispatcher;
+        Dispatcher dispatcher;
         public FinishMakerViewModel()
         {
+            var configFileMap = new ExeConfigurationFileMap();
+            configFileMap.ExeConfigFilename = "FinishMaker.exe.config";
+            config = ConfigurationManager.OpenMappedExeConfiguration(configFileMap, ConfigurationUserLevel.None);
             ExpLinksList = new ObservableCollection<ExportLinks>();
             PDList = new ObservableCollection<PD>();
             IDList = new ObservableCollection<ID>();
@@ -36,13 +40,29 @@ namespace Finish_Maker_Demo
             finishMaker.ProductDataCheck = true;
             finishMaker.ValidateFiles = true;
             StartButton = "Run";
-            UserName = "Evgeniy " + ghbrjk[new Random().Next(0, ghbrjk.Length)];
-            _dispatcher = Dispatcher.CurrentDispatcher;
+            UserName = GetUserName(config);
+            finishMaker.Version = GetVersion();
+            dispatcher = Dispatcher.CurrentDispatcher;
 
             worker = new BackgroundWorker();
             worker.WorkerReportsProgress = true;
             worker.DoWork += worker_DoWork;
             worker.ProgressChanged += worker_ProgressChanged;
+        }
+        private string GetVersion()
+        {
+            string configVersion = config.AppSettings.Settings["version"].Value;
+            return configVersion;
+        }
+        private string GetUserName(Configuration config)
+        {
+            string userName = config.AppSettings.Settings["name"].Value;
+            return userName;
+        }
+        private void SetUserName(Configuration config)
+        {
+            config.AppSettings.Settings["name"].Value = UserName;
+            config.Save(ConfigurationSaveMode.Modified);
         }
 
         private RelayCommand addExpLinksCommand;
@@ -208,7 +228,6 @@ namespace Finish_Maker_Demo
                   }));
             }
         }
-
         public RelayCommand DeleteCommand
         {
             get
@@ -249,7 +268,15 @@ namespace Finish_Maker_Demo
                 OnPropertyChanged("UserName");
             }
         }
-
+        public string Version
+        {
+            get { return finishMaker.Version; }
+            set
+            {
+                finishMaker.Version = value;
+                OnPropertyChanged("Version");
+            }
+        }
         public ConsoleText ConsoleTextProperty
         {
             get { return consoleTextProperty; }
@@ -273,120 +300,116 @@ namespace Finish_Maker_Demo
         }
 
         private BackgroundWorker worker;
-
         private void changeProgress(int count)
         {
             this.worker.ReportProgress(count);
         }
-
         private void worker_DoWork(object sender, DoWorkEventArgs e)
         {
-            if (StartButton == "Clear")
-            {
-                changeProgress(0);
-                _dispatcher.BeginInvoke(new Action(() =>
-                {
-                    ExpLinksList.Clear();
-                    PDList.Clear();
-                    IDList.Clear();
-                    ChtDuplicatesList.Clear();
-                }));
-                StartButton = "Run";
-                ConsoleTextProperty = new ConsoleText { TheColor = Brushes.Black, TheText = "" };
+            if(!checkIfNotFirstStart())
                 return;
-            }
+            OpenFileDialog fileDialog = GetFileDialog();
 
-            OpenFileDialog fd = new OpenFileDialog();
-            fd.ValidateNames = false;
-            fd.CheckFileExists = false;
-            fd.CheckPathExists = true;
-            fd.FileName = "Folder Selection.";
-
-            if (fd.ShowDialog() == true)
+            if (fileDialog.ShowDialog() == true)
             {
                 try
                 {
                     ConsoleMessage message = new ConsoleMessage();
                     message.MessageNotification += MessageTriger;
-                    string saveFilePath = Path.GetDirectoryName(fd.FileName);
-
+                    string saveFilePath = Path.GetDirectoryName(fileDialog.FileName);
                     Stopwatch stopWatch = new Stopwatch();
                     stopWatch.Start();
 
                     ConsoleTextProperty = new ConsoleText { TheText = "In progress..." + Environment.NewLine, TheColor = Brushes.Black };
-
                     List<List<string>> filePath = GetAllPathes(ExpLinksList, PDList, IDList, ChtDuplicatesList);
 
                     FileReader fileReader = new FileReader(filePath, IsSelectedPDCheck, message);
-
                     changeProgress(10);
                     Mistakes mistakesCheck = new Mistakes(fileReader, filePath, IsSelectedPDCheck);
-
-                    if (ValidateFiles == true)
-                    {
-                        if (mistakesCheck.CriticalErrors != null)
-                        {
-                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.CriticalErrors };
-                            ConsoleTextProperty = someConsoleText;
-                            changeProgress(0);
-                            return;
-                        }
-                    }
-
+                    if (CheckForCriticalErrors(mistakesCheck))
+                        return;
                     Processing processing = new Processing(fileReader, UserName, FitmentUpdateCheck, message);
                     Writer writer = new Writer(processing, changeProgress, saveFilePath, message, fileReader);
-
-                    //writer.WriteExcelFile();
-
                     writer.Write();
 
-                    if (ValidateFiles == true)
-                    {
-                        if (mistakesCheck.OtherErrors != null)
-                        {
-                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.OtherErrors };
-                            someConsoleText.TheText += "Done";
-                            ConsoleTextProperty = someConsoleText;
-                        }
-                        else
-                        {
-                            ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Black, TheText = "Done" };
-                            ConsoleTextProperty = someConsoleText;
-                        }
-                    }
-                    else
-                    {
-                        ConsoleText someConsoleText = new ConsoleText { TheColor = Brushes.Black, TheText = "Done" };
-                        ConsoleTextProperty = someConsoleText;
-                    }
-
+                    CheckAllErrors(mistakesCheck);
                     changeProgress(100);
 
                     stopWatch.Stop();
                     TimeSpan ts = stopWatch.Elapsed;
-
                     string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}", ts.Hours, ts.Minutes, ts.Seconds);
-
                     ConsoleText workingTime = ConsoleTextProperty;
                     workingTime.TheText += Environment.NewLine + "Время работы программы: " + elapsedTime;
                     ConsoleTextProperty = workingTime;
-
                     StartButton = "Clear";
                 }
                 catch (Exception ex)
                 {
                     ConsoleTextProperty = new ConsoleText { TheText = "Произошла ошибка: " + ex, TheColor = Brushes.Red };
                 }
-
             }
-
+            SetUserName(config);
         }
-
+        private void CheckAllErrors(Mistakes mistakesCheck)
+        {
+            if (ValidateFiles)
+            {
+                if (mistakesCheck.OtherErrors != null)
+                    ConsoleTextProperty = new ConsoleText { TheColor = Brushes.Red, TheText = mistakesCheck.OtherErrors + "Done" };
+                else
+                    ConsoleTextProperty = new ConsoleText { TheColor = Brushes.Black, TheText = "Done" };
+            }
+            else
+                ConsoleTextProperty = new ConsoleText { TheColor = Brushes.Black, TheText = "Done" };
+        }
+        private bool CheckForCriticalErrors(Mistakes mistakesCheck)
+        {
+            if (ValidateFiles)
+            {
+                if (mistakesCheck.CriticalErrors != null)
+                {
+                    ClearProperties(mistakesCheck.CriticalErrors);
+                    return true;
+                }
+            }
+            return false;
+        }
+        private OpenFileDialog GetFileDialog()
+        {
+            OpenFileDialog fileDialog = new OpenFileDialog();
+            fileDialog.ValidateNames = false;
+            fileDialog.CheckFileExists = false;
+            fileDialog.CheckPathExists = true;
+            fileDialog.FileName = "Folder Selection.";
+            return fileDialog;
+        }
+        private bool checkIfNotFirstStart()
+        {
+            if (StartButton == "Clear")
+            {
+                ClearProperties();
+                return false;
+            }
+            else
+                return true;
+        }
+        private void ClearProperties(string text="")
+        {
+            changeProgress(0);
+            dispatcher.BeginInvoke(new Action(() =>
+            {
+                ExpLinksList.Clear();
+                PDList.Clear();
+                IDList.Clear();
+                ChtDuplicatesList.Clear();
+            }));
+            StartButton = "Run";
+            ConsoleTextProperty = new ConsoleText { TheColor = Brushes.Red, TheText = text };
+        }
         void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             Progress = e.ProgressPercentage;
         }
-
         private List<List<string>> GetAllPathes(ObservableCollection<ExportLinks> expLinkPath, ObservableCollection<PD> pdPath, ObservableCollection<ID> idPath, ObservableCollection<ChildTitleDuplicates> chtPath)
         {
             var expLinkNames = from exp in expLinkPath select exp.Path;
@@ -400,7 +423,6 @@ namespace Finish_Maker_Demo
             result.Add(chtNames.ToList());
             return result;
         }
-
         private void MessageTriger(string message)
         {
             ConsoleTextProperty = new ConsoleText { TheColor = Brushes.Black, TheText = message };

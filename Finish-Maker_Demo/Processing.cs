@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -745,7 +744,7 @@ namespace Finish_Maker_Demo
 
             foreach (var brand in brandSeriesKey)
             {
-                if (!statBrands.Contains(brand))
+                if (!statBrands.Contains(brand, StringComparer.OrdinalIgnoreCase))
                 {
                     //string totalSkuCount = "0";
                     //for (int i = 2; i < mainData.GetLength(0); i++)

@@ -47,7 +47,8 @@
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0">
             <StackPanel Style="{StaticResource stdStackPanel}">
-                <StackPanel Orientation="Vertical" Margin="10 0 40 0">
+                <TextBlock Name="version" Text="{Binding Version}"/>
+                <StackPanel Orientation="Vertical" Margin="10 0 20 0">
                     <StackPanel Orientation="Horizontal" Margin="0 0 0 0">
                         <CheckBox IsChecked="{Binding IsSelectedExpLinkCheck}" Margin="0 0 5 0"/>
                         <TextBlock Text="Create by SKU from Export Links"/>

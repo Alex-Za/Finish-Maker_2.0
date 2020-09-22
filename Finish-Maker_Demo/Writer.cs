@@ -46,21 +46,17 @@ namespace Finish_Maker_Demo
             int lastFilledRow = 8;
 
             worksheet.Cells[1, 1].EntireColumn.ColumnWidth = 6;
-
             changeProgress(20);
 
             HeaderWrite(worksheet, lastFilledRow);
-
             changeProgress(25);
 
             JobberAppWrite(worksheet, lastFilledRow);
-
             changeProgress(30);
 
             lastFilledRow = lastFilledRow + processing.JobberApp.GetLength(0) + 1;
 
             MainWrite(worksheet, lastFilledRow);
-
             changeProgress(40);
 
             lastFilledRow = lastFilledRow + processing.MainData.GetLength(0) + 2;
@@ -76,28 +72,23 @@ namespace Finish_Maker_Demo
             worksheet = (Excel.Worksheet)workbook.Sheets.Add(Type.Missing, sheet[1], Type.Missing, Type.Missing);
 
             WriteNewSKUList(worksheet);
-
             changeProgress(50);
 
             //создание листа новых серий
             worksheet = (Excel.Worksheet)workbook.Sheets.Add(Type.Missing, sheet[2], Type.Missing, Type.Missing);
 
             WriteNewSeriesList(worksheet);
-
             changeProgress(60);
 
             //создание и запись листа фитмент апдейта
             worksheet = (Excel.Worksheet)workbook.Sheets.Add(Type.Missing, sheet[3], Type.Missing, Type.Missing);
 
             WriteFitmUpdateList(worksheet);
-
             changeProgress(70);
 
             //создание и запись листа проблематик ску
             worksheet = (Excel.Worksheet)workbook.Sheets.Add(Type.Missing, sheet[4], Type.Missing, Type.Missing);
-
             WriteProblematicList(worksheet);
-
             changeProgress(80);
 
             //создание листа пендинг
@@ -106,7 +97,6 @@ namespace Finish_Maker_Demo
 
             //создание листа чаилд дубликатов
             worksheet = (Excel.Worksheet)workbook.Sheets.Add(Type.Missing, sheet[6], Type.Missing, Type.Missing);
-
             WriteChildDupList(worksheet);
 
             //финиш
@@ -154,7 +144,6 @@ namespace Finish_Maker_Demo
             }
 
             CreateWbForTask(saveFilePath);
-
             changeProgress(90);
 
         }
@@ -167,7 +156,6 @@ namespace Finish_Maker_Demo
             }
             return value;
         }
-
         private void HeaderWrite(Excel.Worksheet worksheet, int lastFilledRow)
         {
             message.MessageTriger("Создание шапки финиш файла...");
@@ -212,7 +200,6 @@ namespace Finish_Maker_Demo
                 worksheet.Range[worksheet.Cells[i, 4], worksheet.Cells[i, 8]].Merge();
             }
         }
-
         private void JobberAppWrite(Excel.Worksheet worksheet, int lastFilledRow)
         {
             message.MessageTriger("Заполнение джобер/апликейшен...");
@@ -250,7 +237,6 @@ namespace Finish_Maker_Demo
                 worksheet.Cells[i, 1].EntireRow.RowHeight = 18;
             }
         }
-
         private void MainWrite(Excel.Worksheet worksheet, int lastFilledRow)
         {
             message.MessageTriger("Заполнение мейн даты в финиш файл...");
@@ -394,7 +380,6 @@ namespace Finish_Maker_Demo
             }
 
         }
-
         private void WriteNewSKUList(Excel.Worksheet worksheet)
         {
             message.MessageTriger("Добавление листа с новыми ску...");
@@ -421,7 +406,6 @@ namespace Finish_Maker_Demo
                 range.Cells[1, i].EntireColumn.ColumnWidth = 12;
             }
         }
-
         private void WriteNewSeriesList(Excel.Worksheet worksheet)
         {
             worksheet.Name = "New_Series";
@@ -436,7 +420,6 @@ namespace Finish_Maker_Demo
                 worksheet.Cells[1, i].EntireColumn.ColumnWidth = 12;
             }
         }
-
         private void WriteFitmUpdateList(Excel.Worksheet worksheet)
         {
             message.MessageTriger("Добавление листа с фитмент апдейт...");
@@ -463,7 +446,6 @@ namespace Finish_Maker_Demo
                 range.Cells[1, i].EntireColumn.ColumnWidth = 12;
             }
         }
-
         private void WriteProblematicList(Excel.Worksheet worksheet)
         {
             message.MessageTriger("Добавление листа с проблематик ску...");
@@ -490,7 +472,6 @@ namespace Finish_Maker_Demo
                 range.Cells[1, i].EntireColumn.ColumnWidth = 12;
             }
         }
-
         private void WriteChildDupList(Excel.Worksheet worksheet)
         {
             message.MessageTriger("Добавление листа с чаилд тайт дубликатами...");
@@ -513,7 +494,6 @@ namespace Finish_Maker_Demo
                 range.Cells[1, i].EntireColumn.ColumnWidth = 12;
             }
         }
-
         private void CreateWbForTask(string saveFilePath)
         {
             string pathDir = saveFilePath;
@@ -591,7 +571,6 @@ namespace Finish_Maker_Demo
 
             }
         }
-
         public void WriteExcelFile()
         {
             using (var workbook = new XLWorkbook())
@@ -599,19 +578,17 @@ namespace Finish_Maker_Demo
                 var worksheet = workbook.Worksheets.Add("Sheet1");
                 int counter = 1;
 
-                foreach (var row in fileReader.ExportLinks)
+                foreach (var row in fileReader.PData.PDData1)
                 {
                     int counter2 = 1;
                     foreach (var cell in row)
                     {
-                        //worksheet.Cell(counter, counter2).InsertData(row[counter2-1]);
                         worksheet.Cell(counter, counter2).Value = row[counter2 - 1];
                         counter2++;
                     }
                     counter2 = 0;
                     counter++;
                 }
-
                 workbook.SaveAs("InsertingData.xlsx");
             }
 

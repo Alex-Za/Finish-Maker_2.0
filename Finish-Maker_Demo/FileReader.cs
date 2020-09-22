@@ -4,9 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
 using System.Data;
 using ExcelDataReader;
 
@@ -23,10 +20,9 @@ namespace Finish_Maker_Demo
             this.skuFromPDCheck = skuFromPDCheck;
             this.message = message;
         }
-
         private IEnumerable<List<string>> ParsExportLinks(List<string> path)
         {
-            message.MessageTriger("Чтение експорт линков из цсв файла...");
+            message.MessageTriger("Чтение файла експорт линков...");
             NeededColumnNameInfo neededColumnNameInfo = null;
             var headerInitialize = false;
 
@@ -83,7 +79,7 @@ namespace Finish_Maker_Demo
         }
         private IEnumerable<List<string>> ParsExportLinksWithDataReader(List<string> path)
         {
-            message.MessageTriger("Чтение експорт линков из xlsx файла...");
+            message.MessageTriger("Чтение файла експорт линков...");
             NeededColumnNameInfo neededColumnNameInfo = null;
             var headerInitialize = false;
 
@@ -143,13 +139,13 @@ namespace Finish_Maker_Demo
                 }
             }
         }
-        private IEnumerable<DataRow> GetRowSheetData(string path)
+        private IEnumerable<DataRow> GetRowSheetData(string path, int sheetIndex = 0)
         {
             using (FileStream stream = File.Open(path, FileMode.Open, FileAccess.Read))
             {
                 using (IExcelDataReader reader = ExcelReaderFactory.CreateOpenXmlReader(stream))
                 {
-                    return reader.AsDataSet().Tables[0].AsEnumerable();
+                    return reader.AsDataSet().Tables[sheetIndex].AsEnumerable();
                 }
             }
         }
@@ -250,7 +246,6 @@ namespace Finish_Maker_Demo
 
             return productID;
         }
-
         private IEnumerable<List<string>> ParsChildTitleDuplicates(List<string> path)
         {
             message.MessageTriger("Чтение файла чаил тайтл дубликатов...");
@@ -293,43 +288,51 @@ namespace Finish_Maker_Demo
             }
 
         }
-
-        private void ForParseProductDataxlsx(string filePath, ProductData productData)
+        private void ParseProductDataXlsx(string filePath, ProductData productData)
         {
             message.MessageTriger("Чтение файла продукт даты...");
-
             List<List<string>> dataSheet1 = new List<List<string>>();
             List<List<string>> dataSheet2 = new List<List<string>>();
-
-            using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
-            {
-                if (productData.PDData1 != null)
-                {
-                    dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, true);
-                    AddKeyPDSheet1(dataSheet1);
-                    dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, true);
-                    AddKeyPDSheet2(dataSheet2);
-                }
-                else
-                {
-                    dataSheet1 = ParseExcelSheet(spreadsheetDocument, 0, false);
-                    AddKeyPDSheet1(dataSheet1);
-                    dataSheet2 = ParseExcelSheet(spreadsheetDocument, 1, false);
-                    AddKeyPDSheet2(dataSheet2);
-                }
-
-            }
-
             if (productData.PDData1 != null)
             {
+                dataSheet1 = ParseExcelSheetWithDataReader(filePath, 0, true);
+                AddKeyPDSheet1(dataSheet1);
+                dataSheet2 = ParseExcelSheetWithDataReader(filePath, 1, true);
+                AddKeyPDSheet2(dataSheet2);
                 productData.PDData1 = productData.PDData1.Concat(dataSheet1).ToList();
                 productData.PDData2 = productData.PDData2.Concat(dataSheet2).ToList();
-            }
-            else
+            } else
             {
+                dataSheet1 = ParseExcelSheetWithDataReader(filePath, 0, false);
+                AddKeyPDSheet1(dataSheet1);
+                dataSheet2 = ParseExcelSheetWithDataReader(filePath, 1, false);
+                AddKeyPDSheet2(dataSheet2);
                 productData.PDData1 = dataSheet1;
                 productData.PDData2 = dataSheet2;
             }
+        }
+        private List<List<string>> ParseExcelSheetWithDataReader(string filePath, int sheetNumber, bool headerInitialize)
+        {
+            List<List<string>> dataSheet = new List<List<string>>();
+            var dataFromFile = GetRowSheetData(filePath, sheetNumber);
+            foreach (var lineRow in dataFromFile)
+            {
+                if (headerInitialize)
+                {
+                    headerInitialize = false;
+                    continue;
+                }
+                List<string> dataRow = new List<string>();
+                foreach (var cell in lineRow.ItemArray)
+                {
+                    if (cell != null)
+                        dataRow.Add(cell.ToString());
+                    else
+                        dataRow.Add("");
+                }
+                dataSheet.Add(dataRow);
+            }
+            return dataSheet;
         }
         private void ForParseProductDatacsv(string filePath, ProductData productData)
         {
@@ -393,7 +396,7 @@ namespace Finish_Maker_Demo
             {
                 if (Path.GetExtension(filePath) == ".xlsx")
                 {
-                    ForParseProductDataxlsx(filePath, productData);
+                    ParseProductDataXlsx(filePath, productData);
                 }
                 else if (Path.GetExtension(filePath) == ".csv")
                 {
@@ -464,8 +467,6 @@ namespace Finish_Maker_Demo
                 return chtTitleDuplicates;
             }
         }
-
-
         private ProductData pData;
         public ProductData PData
         {
@@ -477,7 +478,6 @@ namespace Finish_Maker_Demo
                 return pData;
             }
         }
-
         private void GetExportLinksInfo(List<string> dataLine)
             => dataLine.Add(dataLine[1] + dataLine[2]);
         private NeededColumnNameInfo GetNeededColumnNamesInfo(string[] headers)
@@ -500,11 +500,8 @@ namespace Finish_Maker_Demo
                         break;
                     }
                 }
-
             }
-
             return columnNameInfo;
-
         }
         private HashSet<string> GetSKUFromPD()
         {
@@ -522,87 +519,6 @@ namespace Finish_Maker_Demo
             public List<string> HeaderNames { get; set; }
             public List<int> ColumnNumbers { get; set; }
         }
-
-        private int CellReferenceToIndex(Cell cell)
-        {
-            int index = 0;
-            string reference = cell.CellReference.ToString().ToUpper();
-            foreach (char ch in reference)
-            {
-                if (Char.IsLetter(ch))
-                {
-                    int value = (int)ch - (int)'A';
-                    index = (index == 0) ? value : ((index + 1) * 26) + value;
-                }
-                else
-                {
-                    return index;
-                }
-            }
-            return index;
-        }
-        private string GetCellValue(SpreadsheetDocument document, Cell cell)
-        {
-            SharedStringTablePart sstpart = document.WorkbookPart.GetPartsOfType<SharedStringTablePart>().First();
-            SharedStringTable sst = sstpart.SharedStringTable;
-
-            if ((cell.DataType != null) && (cell.DataType == CellValues.SharedString))
-            {
-                int ssid = int.Parse(cell.CellValue.Text);
-                string str = sst.ChildElements[ssid].InnerText;
-                return str;
-            }
-            else if (cell.CellValue != null)
-            {
-                return cell.CellValue.Text;
-            }
-            else
-            {
-                return "";
-            }
-        }
-        private List<List<string>> ParseExcelSheet(SpreadsheetDocument spreadsheetDocument, int sheetIndex, bool headerInitialize)
-        {
-            List<List<string>> dataSheet = new List<List<string>>();
-
-            WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
-            Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().ElementAt(sheetIndex);
-            Worksheet worksheet = ((WorksheetPart)workbookPart.GetPartById(sheet.Id)).Worksheet;
-            SheetData sheetData = worksheet.Elements<SheetData>().First();
-
-
-            int headerColumnCount = sheetData.ElementAt(0).ChildElements.Count;
-
-            foreach (Row row in sheetData.Elements<Row>())
-            {
-                if (headerInitialize == true)
-                {
-                    headerInitialize = false;
-                    continue;
-                }
-
-                List<string> dataList = new List<string>();
-
-                for (int i = 0; i < headerColumnCount; i++)
-                {
-                    dataList.Add(string.Empty);
-                }
-
-                for (int i = 0; i < row.Descendants<Cell>().Count(); i++)
-                {
-                    Cell cell = row.Descendants<Cell>().ElementAt(i);
-                    int actualCellIndex = CellReferenceToIndex(cell);
-                    if (actualCellIndex >= headerColumnCount)
-                        continue;
-                    dataList[actualCellIndex] = GetCellValue(spreadsheetDocument, cell);
-                }
-
-                dataSheet.Add(dataList);
-
-            }
-            return dataSheet;
-        }
-
         private void AddKeyPDSheet1(List<List<string>> sheetData1)
         {
             foreach (List<string> lineData in sheetData1)
@@ -611,9 +527,8 @@ namespace Finish_Maker_Demo
                 //{
                 //    lineData.Add(lineData[0].Remove(lineData[0].Length - 1) + " - " + lineData[10]);
                 //}
-
-                lineData.Add(lineData[0].Remove(lineData[0].Length - 1)); // добавление колонки бренд + серия
-
+                if(lineData[0]!="")
+                    lineData.Add(lineData[0].Remove(lineData[0].Length - 1)); // добавление колонки бренд + серия
                 lineData.Add(lineData[0] + lineData[1]); // добавление колонки бренд + ску
             }
         }
@@ -621,7 +536,8 @@ namespace Finish_Maker_Demo
         {
             foreach (List<string> lineData in sheetData2)
             {
-                lineData.Add(lineData[0].Remove(lineData[0].Length - 1));
+                if(lineData[0] != "")
+                    lineData.Add(lineData[0].Remove(lineData[0].Length - 1));
             }
         }
     }

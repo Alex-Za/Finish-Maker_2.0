@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
@@ -60,7 +59,6 @@ namespace Finish_Maker_Demo
                 }
             }
 
-
             for (int i = 0; i < 4; i += 3)
             {
                 foreach (string s in pathes[i])
@@ -72,7 +70,6 @@ namespace Finish_Maker_Demo
                     }
                 }
             }
-            
 
             foreach (string s in pathes[1])
             {
@@ -91,7 +88,6 @@ namespace Finish_Maker_Demo
                     return;
                 }
             }
-
 
             foreach (string path in pathes[1])
             {
@@ -131,29 +127,29 @@ namespace Finish_Maker_Demo
                             return;
                         }
 
-                        for (int i = 1; i < fileReader.PData.PDData1.Count; i++)
-                        {
-                            if (fileReader.PData.PDData1[i][0] == "")
-                            {
-                                criticalErrors += "Пустое значение на первом листе продукт даты в колонке Brand, строка " + i + Environment.NewLine;
-                            }
-                            if (fileReader.PData.PDData1[i][1] == "")
-                            {
-                                criticalErrors += "Пустое значение на первом листе продукт даты в колонке SKU, строка " + i + Environment.NewLine;
-                            }
-                            if (fileReader.PData.PDData1[i][5] == "" || fileReader.PData.PDData1[i][6] == "")
-                            {
-                                criticalErrors += "Пустое значение на первом листе продукт даты в колонках CategoryName or SubtypeName, строка " + i + Environment.NewLine;
-                            }
-                        }
-
                         if (criticalErrors != null)
-                        {
                             return;
+                    }
+
+                    for (int i = 1; i < fileReader.PData.PDData1.Count; i++)
+                    {
+                        if (fileReader.PData.PDData1[i][0] == "")
+                        {
+                            criticalErrors += "Пустое значение на первом листе продукт даты в колонке Brand, строка " + i + Environment.NewLine;
+                        }
+                        if (fileReader.PData.PDData1[i][1] == "")
+                        {
+                            criticalErrors += "Пустое значение на первом листе продукт даты в колонке SKU, строка " + i + Environment.NewLine;
+                        }
+                        if (fileReader.PData.PDData1[i][5] == "" || fileReader.PData.PDData1[i][6] == "")
+                        {
+                            criticalErrors += "Пустое значение на первом листе продукт даты в колонках CategoryName or SubtypeName, строка " + i + Environment.NewLine;
                         }
                     }
+                    if (criticalErrors != null)
+                        return;
                 }
-                
+
             }
 
             HashSet<string> differentRegistrBrand = new HashSet<string>();
@@ -192,12 +188,13 @@ namespace Finish_Maker_Demo
                 }
 
                 HashSet<string> missingSKU = new HashSet<string>();
+                
 
                 for (int i = 1; i < fileReader.PData.PDData1.Count - 1; i++)
                 {
                     if (!allSKU.Contains(fileReader.PData.PDData1[i][pDataBrandKayPosition]))
                     {
-                        missingSKU.Add(fileReader.PData.PDData1[i][1]);
+                        missingSKU.Add(fileReader.PData.PDData1[i][1] +" - "+ fileReader.PData.PDData1[i][0]);
                     }
                 }
 
@@ -212,17 +209,6 @@ namespace Finish_Maker_Demo
                 }
             }
 
-            //string[] columnNames = { "Product ID", "Brand", "SKU", "Product Name", "Child Title", "Images", "MMY", "Make", "Manufacturer ID", "Model", "Template", "Years", "linkwww" };
-
-            //List<List<string>> exportLinks = fileReader.ExportLinks.ToList();
-
-            //foreach (string column in columnNames)
-            //{
-            //    if (!exportLinks[0].Contains(column))
-            //    {
-            //        criticalErrors += "В файле експорт линков нет колонки - " + column + Environment.NewLine;
-            //    }
-            //}
         }
 
     }

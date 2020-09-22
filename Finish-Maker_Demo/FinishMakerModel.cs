@@ -11,6 +11,7 @@ namespace Finish_Maker_Demo
     class FinishMakerModel
     {
         public string UserName { get; set; }
+        public string Version { get; set; }
         public int Progress { get; set; }
         public bool ValidateFiles { get; set; }
         public bool FitmentUpdate { get; set; }
